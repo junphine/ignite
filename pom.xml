@@ -98,20 +98,6 @@
         </profile>
 
         <profile>
-            <id>compatibility</id>
-            <modules>
-                <module>modules/compatibility</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>build-dotnet</id>
-            <modules>
-                <module>modules/platforms/dotnet</module>
-            </modules>
-        </profile>
-
-        <profile>
             <id>javadoc</id>
             <build>
                 <plugins>

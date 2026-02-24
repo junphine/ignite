@@ -47,12 +47,12 @@ const config = {
             // Exclude tpl.pug files to import in bundle.
             {
                 test: /^(?:(?!tpl\.pug$).)*\.pug$/, // TODO: check this regexp for correct.
-                use: {
+                use: [{
                     loader: 'pug-html-loader',
                     options: {
                         basedir
                     }
-                }
+                }]
             },
 
             // Render .tpl.pug files to assets folder.

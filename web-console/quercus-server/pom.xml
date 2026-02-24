@@ -12,7 +12,7 @@
         <groupId>org.apache.ignite</groupId>
         <artifactId>ignite-web-console</artifactId>
         <version>2.16.999-SNAPSHOT</version>
-        <relativePath>../</relativePath>        
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-quercus-server</artifactId>

@@ -153,7 +153,7 @@ public class WebApiCreater extends AbstractVerticle {
         
         String staticDirs = getProperty("spring.web.resources.static-locations");
         
-        HttpServer server = vertx.createHttpServer(options);
+        server = vertx.createHttpServer(options);
         router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
         router.route().last().failureHandler(ErrorHandler.create(vertx));

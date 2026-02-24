@@ -34,7 +34,8 @@
 
     <url>http://ignite.apache.org</url>
 
-    <properties>        
+    <properties>
+        <maven.compiler.proc>full</maven.compiler.proc>
         <vertx.version>4.4.5</vertx.version>
         <jmail.version>1.6.7</jmail.version>
         <hutool.version>5.7.11</hutool.version>
@@ -207,7 +208,20 @@
     </dependencies>
 
     <build>
-        <plugins>	        
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.42</version> <!-- 使用实际版本号 -->
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>                

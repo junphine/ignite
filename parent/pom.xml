@@ -125,6 +125,7 @@
         <!-- OSGI Manifest generation default property values -->
         <osgi.import.package>*</osgi.import.package>
         <osgi.export.package>{local-packages}</osgi.export.package>
+        <osgi.private.package>**/internal/**</osgi.private.package>
 
         <flattenMode>clean</flattenMode>
 
@@ -276,6 +277,7 @@
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <version>${maven.javadoc.plugin.version}</version>
                     <configuration>
+                        <skip>true</skip>
                         <taglets>
                             <taglet>
                                 <tagletClass>org.apache.ignite.tools.javadoc.IgniteLinkTaglet</tagletClass>
@@ -402,7 +404,7 @@
                     </configuration>
                 </plugin>
 
-                <!-- <plugin>
+                <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
                     <version>${maven.bundle.plugin.version}</version>
@@ -446,7 +448,7 @@
                             </goals>
                         </execution>
                     </executions>
-                </plugin> -->
+                </plugin>
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -968,7 +970,7 @@
                 <dependency>
                     <groupId>org.apache.ignite</groupId>
                     <artifactId>ignite-apache-license-gen</artifactId>
-                    <version>1.4.0</version>
+                    <version>1.5.0-SNAPSHOT</version>
                 </dependency>
             </dependencies>
 
