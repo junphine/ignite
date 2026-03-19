@@ -9,6 +9,7 @@ import java.util.Map;
 public class GenMapperImpl implements GenMapper {
     @Override
     public List<GenTable> selectDbTableList(Map<String,Object> context) {
+        List<String> models = (List)context.get("models");
         return null;
     }
 }
