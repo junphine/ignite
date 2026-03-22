@@ -17,76 +17,36 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.FullTextLucene;
-import org.apache.ignite.cache.FullTextQueryIndex;
-import org.apache.ignite.cache.LuceneConfiguration;
 import org.apache.ignite.cache.LuceneIndexAccess;
-import org.apache.ignite.cache.QueryIndex;
-import org.apache.ignite.cache.query.TextQuery;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
-import org.apache.ignite.internal.processors.cache.query.ScoredCacheEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
+import org.apache.ignite.internal.processors.cache.query.ScoredCacheEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.util.GridAtomicLong;
+import org.apache.ignite.internal.processors.query.QueryIndexDescriptorImpl;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
-import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafeMemory;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.BinaryDocValuesField;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.LongPoint;
-import org.apache.lucene.document.StoredField;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
-
-
+import org.apache.ignite.spi.indexing.IndexingQueryFilter;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser.Operator;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.SortField;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.*;
 import org.apache.lucene.util.BytesRef;
 import org.h2.util.JdbcUtils;
 import org.jetbrains.annotations.Nullable;
-import org.apache.ignite.internal.processors.query.QueryIndexDescriptorImpl;
+
+import java.io.IOException;
+import java.util.Map;
 
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
-import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
 
 
 
@@ -330,12 +290,12 @@ public class GridLuceneIndex implements AutoCloseable {
 
             if(orderBy!=null){
             	String[] sorts = orderBy.split(",");
-            	Sort sortObj = new Sort();
+
             	SortField[] sf = new SortField[sorts.length];
             	for(int j=0;j<sorts.length;j++){            		
             		sf[j] = new SortField(sorts[j],SortField.Type.DOUBLE,true);
             	}
-            	sortObj.setSort(sf);
+                Sort sortObj = new Sort(sf);
             	docs = searcher.search(query.build(), limit, sortObj);
             }
             else{
@@ -344,7 +304,6 @@ public class GridLuceneIndex implements AutoCloseable {
         }
         catch (Exception e) {
             //U.closeQuiet(indexAccess.reader);
-
             throw new IgniteCheckedException(e);
         }
 
@@ -391,7 +350,6 @@ public class GridLuceneIndex implements AutoCloseable {
         /**
          * Constructor.
          *
-         * @param reader Reader.
          * @param searcher Searcher.
          * @param docs Docs.
          * @param filters Filters over result.
@@ -415,7 +373,6 @@ public class GridLuceneIndex implements AutoCloseable {
          * @return Object.
          * @throws IgniteCheckedException If failed.
          */
-        @SuppressWarnings("unchecked")
         private <Z> Z unmarshall(byte[] bytes, ClassLoader ldr) throws IgniteCheckedException {
             if (coctx == null) // For tests.
                 return (Z)JdbcUtils.deserialize(bytes, null);
@@ -428,7 +385,6 @@ public class GridLuceneIndex implements AutoCloseable {
          *
          * @throws IgniteCheckedException If failed.
          */
-        @SuppressWarnings("unchecked")
         private void findNext() throws IgniteCheckedException {
             curr = null;
             ClassLoader ldr = null;
@@ -445,9 +401,8 @@ public class GridLuceneIndex implements AutoCloseable {
                 float score;
 
                 try {
-                    doc = searcher.doc(docs[idx].doc);                   
+                    doc = searcher.storedFields().document(docs[idx].doc);
                     score = docs[idx].score;
-
                     idx++;
                 }
                 catch (IOException e) {

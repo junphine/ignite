@@ -52,25 +52,9 @@ import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafeMemory;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.DateTools;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.DoubleDocValuesField;
-import org.apache.lucene.document.DoublePoint;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.FloatDocValuesField;
-import org.apache.lucene.document.FloatPoint;
-import org.apache.lucene.document.IntPoint;
-import org.apache.lucene.document.LongPoint;
-import org.apache.lucene.document.NumericDocValuesField;
-import org.apache.lucene.document.StoredField;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
+import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
@@ -171,7 +155,7 @@ public class FullTextLucene {
     	if(schema==null || schema.isEmpty()){
     		return table;
     	}
-    	if(table==null || table.length()==0){
+    	if(table==null || table.isEmpty()){
 			return schema.toUpperCase();
 		}			
     	if(ctx.cache().cacheNames().contains(schema)){
@@ -191,7 +175,6 @@ public class FullTextLucene {
      * @return Object.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("unchecked")
     private static <Z> Z unmarshall(byte[] bytes, ClassLoader ldr,CacheObjectContext coctx) throws IgniteCheckedException {
         if (coctx == null) // For tests.
             return (Z)JdbcUtils.deserialize(bytes, null);
@@ -619,7 +602,7 @@ public class FullTextLucene {
            
             if (!access.typeFields.containsKey(table) || access.typeFields.get(table).isEmpty()) {
                 //fill indexed fields
-				if(table!=null && table.length()!=0){
+				if(table!=null && !table.isEmpty()){
 					
 				    // read index desc form FTL.INDEXES
 				    if(conn!=null){                	
@@ -841,7 +824,7 @@ public class FullTextLucene {
             // this is just to query the result set columns
             return result;
         }
-        if (text == null || text.trim().length() == 0) {
+        if (text == null || text.trim().isEmpty()) {
             return result;
         }
         try {
@@ -1336,11 +1319,11 @@ public class FullTextLucene {
 				doc.add(row);
 			} 
 			else if (obj instanceof float[]) {    					
-				row = new FloatPoint(idxdField, (float[])obj);
+				row = new KnnFloatVectorField(idxdField, (float[])obj, VectorSimilarityFunction.COSINE);
 				doc.add(row);				
 			}
 			else if (obj instanceof double[]) { 									
-				row = new DoublePoint(idxdField, (double[])obj);
+				row = new KnnFloatVectorField(idxdField, doubleToFloat((double[])obj),VectorSimilarityFunction.COSINE);
 				doc.add(row);				
 			}    		
         } catch (Exception e) {			
@@ -1348,6 +1331,18 @@ public class FullTextLucene {
         	ctx.log("Faid to index field "+ idxdField + ", Cause by "+e.getMessage());
 		}
 		return true;
+    }
+
+
+    /**
+     * 将 double 数组转换为 float 数组
+     */
+    public static float[] doubleToFloat(double[] doubleVector) {
+        float[] floatVector = new float[doubleVector.length];
+        for (int i = 0; i < doubleVector.length; i++) {
+            floatVector[i] = (float) doubleVector[i];
+        }
+        return floatVector;
     }
 }
 

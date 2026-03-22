@@ -382,7 +382,6 @@ public class LuceneIndexAccess {
      * set.
      *
      * @param access the index writer/searcher wrapper
-     * @param indexPath the index path
      */
     public static void removeIndexAccess(LuceneIndexAccess access) {
         synchronized (INDEX_ACCESS) {
@@ -394,6 +393,4 @@ public class LuceneIndexAccess {
             }
         }
     }
-    
-    
 }
