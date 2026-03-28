@@ -3,66 +3,19 @@
 package org.apache.ignite.console.agent.handlers;
 
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.console.agent.AgentUtils.configureProxy;
-import static org.apache.ignite.console.agent.AgentUtils.entriesToMap;
-import static org.apache.ignite.console.agent.AgentUtils.entry;
-import static org.apache.ignite.console.agent.AgentUtils.secured;
-import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
-import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_ID;
-import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_NAME;
-import static org.apache.ignite.console.utils.Utils.fromJson;
-import static org.apache.ignite.console.websocket.AgentHandshakeRequest.CURRENT_VER;
-import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
-import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_CALL_CLUSTER_COMMAND;
-import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_CALL_CLUSTER_SERVICE;
-import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
-import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
-import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_START_CLUSTER;
-import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STOP_CLUSTER;
-import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
-import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
-import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
-import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
-import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
-
-import java.io.File;
-import java.net.URI;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.compute.ComputeTaskFuture;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.agent.AgentUtils;
 import org.apache.ignite.console.agent.IgniteClusterLauncher;
 import org.apache.ignite.console.agent.code.CrudUICodeGenerator;
 import org.apache.ignite.console.agent.db.DataSourceManager;
 import org.apache.ignite.console.agent.rest.GremlinExecutor;
-import org.apache.ignite.console.agent.rest.RestExecutor;
 import org.apache.ignite.console.agent.rest.RestRequest;
 import org.apache.ignite.console.agent.rest.RestResult;
 import org.apache.ignite.console.agent.service.CacheAgentService;
@@ -77,32 +30,35 @@ import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.console.websocket.WebSocketResponse;
-import org.apache.ignite.internal.IgnitionEx;
-import org.apache.ignite.internal.jackson.IgniteObjectMapper;
-import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
-
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
-import org.apache.ignite.services.Service;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-
+import org.eclipse.jetty.websocket.api.Frame;
 import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketError;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketFrame;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
-import org.eclipse.jetty.websocket.api.annotations.WebSocket;
-import org.eclipse.jetty.websocket.api.extensions.Frame;
+import org.eclipse.jetty.websocket.api.annotations.*;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import java.io.File;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.console.agent.AgentUtils.*;
+import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_ID;
+import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_NAME;
+import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.websocket.AgentHandshakeRequest.CURRENT_VER;
+import static org.apache.ignite.console.websocket.WebSocketEvents.*;
 
 /**
  * Router that listen for web socket and redirect messages to event bus.
@@ -285,7 +241,7 @@ public class WebSocketRouter implements AutoCloseable {
             client.start();
             Session session = client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(5L, TimeUnit.SECONDS);         
                         
-            session.setIdleTimeout(3600*1000);
+            session.setIdleTimeout(Duration.ofSeconds(3600));
             
             reconnectCnt.set(0);
             

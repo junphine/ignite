@@ -40,17 +40,18 @@
             <artifactId>log4j-web</artifactId>
         </dependency>
 	    
-	    <dependency>
+<!--
+        <dependency>
 	      <groupId>com.caucho.quercus</groupId>
 	      <artifactId>quercus</artifactId>
 	      <version>4.0.42-MOD4-SNAPSHOT</version>
 	    </dependency>
-	    
+
 	    <dependency>
 	      <groupId>com.caucho.quercus</groupId>
 	      <artifactId>quercus-mongo</artifactId>
 	      <version>4.0.42-MOD4-SNAPSHOT</version>
-	    </dependency>      
+	    </dependency>-->
         
         <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-rewrite -->
 		<dependency>

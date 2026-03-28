@@ -10,6 +10,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.servlet.Servlet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
@@ -55,20 +56,13 @@ public class GridJettyQuercusProtocol  {
     private static final String IGNITE_JETTY_HOST = "JETTY_HOST";
     private static final String IGNITE_JETTY_PORT = "JETTY_PORT";
 
-
     /** HTTP server. */
     private static Server httpSrv;
-
-    
     private InetAddress host;
-    
     private int port;
 
-    /**
-     * @param ctx Context.
-     */
     public GridJettyQuercusProtocol() {
-       
+       Servlet servlet;
     }
 
 

@@ -11,8 +11,7 @@
         <version>2.16.999-SNAPSHOT</version>
     </parent>
 
-    <artifactId>ignite-web-console-common</artifactId>    
-    <url>http://ignite.apache.org</url>
+    <artifactId>ignite-web-console-common</artifactId>
 
     <dependencies>
         <!-- Ignite dependencies -->
@@ -46,6 +45,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>${commons.lang3.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>RELEASE</version>
         </dependency>
 
     </dependencies>

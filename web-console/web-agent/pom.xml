@@ -9,8 +9,7 @@
     </parent>
 
     <artifactId>ignite-web-console-agent-ce</artifactId>
-    <packaging>jar</packaging>   
-    <url>http://ignite.apache.org</url>
+    <packaging>jar</packaging>
 
     <dependencies>
         <!-- Ignite dependencies -->
@@ -115,7 +114,7 @@
 
         <dependency>
             <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-client</artifactId>
+            <artifactId>websocket-jetty-client</artifactId>
             <version>${jetty.version}</version>
         </dependency>
 

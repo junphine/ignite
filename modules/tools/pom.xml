@@ -36,16 +36,6 @@
 
     <profiles>
         <profile>
-            <id>java-15+</id>
-            <activation>
-                <jdk>[15,)</jdk>
-            </activation>
-            <properties>
-                <src.javaspecific.dir>src/main/java15</src.javaspecific.dir>
-            </properties>
-        </profile>
-
-        <profile>
             <!--
             This profile is used to provide a check that all tests are defined in at least one suite.
             Here we provide a custom surefire test provider to collect info about tests and suites.
