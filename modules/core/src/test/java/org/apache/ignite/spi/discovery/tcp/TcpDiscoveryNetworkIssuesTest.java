@@ -17,7 +17,6 @@
 package org.apache.ignite.spi.discovery.tcp;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -50,7 +49,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
-import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutHelper;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
@@ -200,8 +198,10 @@ public class TcpDiscoveryNetworkIssuesTest extends GridCommonAbstractTest {
                 return super.readReceipt(sock, timeout);
             }
 
-            @Override protected Socket openSocket(InetSocketAddress sockAddr,
-                IgniteSpiOperationTimeoutHelper timeoutHelper) throws IOException, IgniteSpiOperationTimeoutException {
+            @Override protected Socket openSocket(
+                InetSocketAddress sockAddr,
+                IgniteSpiOperationTimeoutHelper timeoutHelper
+            ) throws IOException, IgniteCheckedException {
                 if (netBroken.get() && sockAddr.getPort() == NODE_4_PORT)
                     throw new SocketTimeoutException("connect timed out");
 
@@ -308,7 +308,7 @@ public class TcpDiscoveryNetworkIssuesTest extends GridCommonAbstractTest {
 
         // Request to establish new permanent cluster connection from doubting node0 to node2.
         testSpi(doubtNode0).hsRqLsnr.set((s, hsRq) -> {
-            if (hsRq.changeTopology() && frozenNodeId.equals(hsRq.checkPreviousNodeId())) {
+            if (hsRq.previousNodeId() != null && frozenNodeId.equals(hsRq.previousNodeId())) {
                 // Continue simulation of node1 freeze at GC and processes no discovery messages.
                 testSpi(frozenNode1).addrsToBlock = Collections.emptyList();
             }
@@ -538,9 +538,9 @@ public class TcpDiscoveryNetworkIssuesTest extends GridCommonAbstractTest {
 
         Object spis = GridTestUtils.getFieldValue(disco, GridManagerAdapter.class, "spis");
 
-        OutputStream out = GridTestUtils.getFieldValue(((Object[])spis)[0], "impl", "msgWorker", "out");
+        TcpDiscoveryIoSession ses = GridTestUtils.getFieldValue(((Object[])spis)[0], "impl", "msgWorker", "ses");
 
-        out.close();
+        ses.socket().getOutputStream().close();
     }
 
     /**
@@ -618,8 +618,12 @@ public class TcpDiscoveryNetworkIssuesTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override protected void writeToSocket(TcpDiscoveryAbstractMessage msg, Socket sock, int res,
-            long timeout) throws IOException {
+        @Override protected void writeToSocket(
+            TcpDiscoveryAbstractMessage msg,
+            Socket sock,
+            int res,
+            long timeout
+        ) throws IOException, IgniteCheckedException {
             if (dropMsg(sock))
                 return;
 
@@ -627,26 +631,30 @@ public class TcpDiscoveryNetworkIssuesTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override protected void writeToSocket(Socket sock, OutputStream out, TcpDiscoveryAbstractMessage msg,
+        @Override protected void writeMessage(TcpDiscoveryIoSession ses, TcpDiscoveryAbstractMessage msg,
             long timeout) throws IOException, IgniteCheckedException {
             BiConsumer<Socket, TcpDiscoveryHandshakeRequest> hsRqLsnr;
             BiConsumer<Socket, TcpDiscoveryHandshakeResponse> hsRespLsnr;
 
             if (msg instanceof TcpDiscoveryHandshakeRequest && (hsRqLsnr = this.hsRqLsnr.get()) != null)
-                hsRqLsnr.accept(sock, (TcpDiscoveryHandshakeRequest)msg);
+                hsRqLsnr.accept(ses.socket(), (TcpDiscoveryHandshakeRequest)msg);
 
             if (msg instanceof TcpDiscoveryHandshakeResponse && (hsRespLsnr = this.hsRespLsnr.get()) != null)
-                hsRespLsnr.accept(sock, (TcpDiscoveryHandshakeResponse)msg);
+                hsRespLsnr.accept(ses.socket(), (TcpDiscoveryHandshakeResponse)msg);
 
-            if (dropMsg(sock))
+            if (dropMsg(ses.socket()))
                 return;
 
-            super.writeToSocket(sock, out, msg, timeout);
+            super.writeMessage(ses, msg, timeout);
         }
 
         /** {@inheritDoc} */
-        @Override protected void writeToSocket(Socket sock, TcpDiscoveryAbstractMessage msg, byte[] data,
-            long timeout) throws IOException {
+        @Override protected void writeToSocket(
+            Socket sock,
+            TcpDiscoveryAbstractMessage msg,
+            byte[] data,
+            long timeout
+        ) throws IOException, IgniteCheckedException {
             if (dropMsg(sock))
                 return;
 

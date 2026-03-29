@@ -17,16 +17,13 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Entry information that gets passed over wire.
@@ -35,34 +32,35 @@ public class GridCacheEntryInfo implements Message {
     /** */
     private static final int SIZE_OVERHEAD = 3 * 8 /* reference */ + 4 /* int */ + 2 * 8 /* long */ + 32 /* version */;
 
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Cache key. */
+    @Order(0)
     @GridToStringInclude
-    private KeyCacheObject key;
+    KeyCacheObject key;
 
     /** Cache ID. */
-    private int cacheId;
+    @Order(1)
+    int cacheId;
 
     /** Cache value. */
-    private CacheObject val;
+    @Order(2)
+    CacheObject val;
 
     /** Time to live. */
-    private long ttl;
+    @Order(3)
+    long ttl;
 
     /** Expiration time. */
-    private long expireTime;
+    @Order(4)
+    long expireTime;
 
     /** Entry version. */
-    private GridCacheVersion ver;
+    @Order(5)
+    GridCacheVersion ver;
 
     /** New flag. */
-    @GridDirectTransient
     private boolean isNew;
 
     /** Deleted flag. */
-    @GridDirectTransient
     private boolean deleted;
 
     /**
@@ -178,132 +176,8 @@ public class GridCacheEntryInfo implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("cacheId", cacheId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeLong("expireTime", expireTime))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeMessage("key", key))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeLong("ttl", ttl))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeMessage("val", val))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeMessage("ver", ver))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                cacheId = reader.readInt("cacheId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                expireTime = reader.readLong("expireTime");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                key = reader.readMessage("key");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                ttl = reader.readLong("ttl");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                val = reader.readMessage("val");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                ver = reader.readMessage("ver");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridCacheEntryInfo.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 91;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 6;
     }
 
     /**
@@ -355,7 +229,7 @@ public class GridCacheEntryInfo implements Message {
         if (expireTime == 0)
             expireTime = -1;
         else {
-            expireTime = expireTime - U.currentTimeMillis();
+            expireTime -= U.currentTimeMillis();
 
             if (expireTime < 0)
                 expireTime = 0;

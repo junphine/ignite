@@ -17,15 +17,14 @@
 
 package org.apache.ignite.internal.processors.query.stat.messages;
 
-import java.nio.ByteBuffer;
+import java.io.Serializable;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Statistics by column (or by set of columns, if they collected together)
  */
-public class StatisticsColumnData implements Message {
+public class StatisticsColumnData implements Message, Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -33,31 +32,40 @@ public class StatisticsColumnData implements Message {
     public static final short TYPE_CODE = 186;
 
     /** Min value in column. */
-    private StatisticsDecimalMessage min;
+    @Order(0)
+    StatisticsDecimalMessage min;
 
     /** Max value in column. */
-    private StatisticsDecimalMessage max;
+    @Order(1)
+    StatisticsDecimalMessage max;
 
     /** Number of null values in column. */
-    private long nulls;
+    @Order(2)
+    long nulls;
 
     /** Number of distinct values in column (except nulls). */
-    private long distinct;
+    @Order(3)
+    long distinct;
 
     /** Total vals in column. */
-    private long total;
+    @Order(4)
+    long total;
 
     /** Average size, for variable size values (in bytes). */
-    private int size;
+    @Order(5)
+    int size;
 
     /** Raw data. */
-    private byte[] rawData;
+    @Order(6)
+    byte[] rawData;
 
     /** Version. */
-    private long ver;
+    @Order(7)
+    long ver;
 
     /** Created at time, milliseconds. */
-    private long createdAt;
+    @Order(8)
+    long createdAt;
 
     /**
      * Default constructor.
@@ -165,173 +173,8 @@ public class StatisticsColumnData implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeLong("createdAt", createdAt))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeLong("distinct", distinct))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeMessage("max", max))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeMessage("min", min))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeLong("nulls", nulls))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeByteArray("rawData", rawData))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeInt("size", size))
-                    return false;
-
-                writer.incrementState();
-
-            case 7:
-                if (!writer.writeLong("total", total))
-                    return false;
-
-                writer.incrementState();
-
-            case 8:
-                if (!writer.writeLong("ver", ver))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                createdAt = reader.readLong("createdAt");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                distinct = reader.readLong("distinct");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                max = reader.readMessage("max");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                min = reader.readMessage("min");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                nulls = reader.readLong("nulls");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                rawData = reader.readByteArray("rawData");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 6:
-                size = reader.readInt("size");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 7:
-                total = reader.readLong("total");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 8:
-                ver = reader.readLong("ver");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(StatisticsColumnData.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return TYPE_CODE;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 9;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-
-    }
 }

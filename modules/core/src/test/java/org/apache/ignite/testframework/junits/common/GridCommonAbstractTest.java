@@ -103,6 +103,7 @@ import org.apache.ignite.internal.processors.cache.WalStateManager.WALDisableCon
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
@@ -141,6 +142,7 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerContext;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
+import org.apache.ignite.marshaller.Marshallers;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.mxbean.MXBeanDescription;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -182,7 +184,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     protected static final int SERVICE_DEPLOYMENT_WAIT_TIMEOUT = 10_000;
 
     /** */
-    public static final JdkMarshaller TEST_JDK_MARSHALLER = new JdkMarshaller();
+    public static final JdkMarshaller TEST_JDK_MARSHALLER = Marshallers.jdk();
 
     /**
      * @param startGrid If {@code true}, then grid node will be auto-started.
@@ -1671,19 +1673,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
-     * @param e Exception.
-     * @param exCls Ex class.
-     */
-    protected <T extends IgniteException> void assertCacheExceptionWithCause(RuntimeException e, Class<T> exCls) {
-        if (exCls.isAssignableFrom(e.getClass()))
-            return;
-
-        if (e.getClass() != CacheException.class
-            || e.getCause() == null || !exCls.isAssignableFrom(e.getCause().getClass()))
-            throw e;
-    }
-
-    /**
      * @param cache Cache.
      */
     protected <K, V> GridCacheAdapter<K, V> cacheFromCtx(IgniteCache<K, V> cache) {
@@ -2856,5 +2845,20 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     /** @return Marshaller. */
     protected static Marshaller marshaller(Ignite ign) {
         return ((IgniteEx)ign).context().marshaller();
+    }
+
+    /**
+     * Wait for rebalance on current topology finished.
+     */
+    protected static void waitRebalanceFinished(IgniteEx ignite, String cacheName) throws Exception {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            IgniteInternalFuture<Boolean> fut = ignite.cachex(cacheName).context().preloader().rebalanceFuture();
+
+            GridDhtPartitionDemander.RebalanceFuture rebFut = (GridDhtPartitionDemander.RebalanceFuture)fut;
+
+            return (!rebFut.isInitial() && rebFut.topologyVersion().topologyVersion() == ignite.cluster().topologyVersion());
+        }, 1000));
+
+        assertTrue(ignite.cachex(cacheName).context().preloader().rebalanceFuture().get());
     }
 }

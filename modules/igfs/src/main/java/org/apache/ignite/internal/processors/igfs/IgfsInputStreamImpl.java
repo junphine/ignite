@@ -47,6 +47,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.ignite.events.EventType.EVT_IGFS_FILE_CLOSED_READ;
+import static org.apache.ignite.internal.util.GridUnsafe.arrayCopy;
 
 /**
  * Input stream to read data from grid cache with separate blocks.
@@ -410,7 +411,7 @@ public class IgfsInputStreamImpl extends IgfsInputStream implements IgfsSecondar
 
         len = Math.min(len, block.length - blockOff);
 
-        U.arrayCopy(block, blockOff, buf, off, len);
+        arrayCopy(block, blockOff, buf, off, len);
 
         bytes += len;
         time += System.nanoTime() - startTime;

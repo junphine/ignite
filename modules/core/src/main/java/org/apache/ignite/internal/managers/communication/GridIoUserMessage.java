@@ -17,64 +17,58 @@
 
 package org.apache.ignite.internal.managers.communication;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.configuration.DeploymentMode;
-import org.apache.ignite.internal.GridDirectMap;
-import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * User message wrapper.
  */
 public class GridIoUserMessage implements Message {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Message body. */
-    @GridDirectTransient
     private Object body;
 
     /** Serialized message body. */
-    private byte[] bodyBytes;
+    @Order(0)
+    byte[] bodyBytes;
 
     /** Class loader ID. */
-    private IgniteUuid clsLdrId;
+    @Order(1)
+    IgniteUuid clsLdrId;
 
     /** Message topic. */
-    @GridDirectTransient
     private Object topic;
 
     /** Serialized message topic. */
-    private byte[] topicBytes;
+    @Order(2)
+    byte[] topicBytes;
 
     /** Deployment mode. */
-    private DeploymentMode depMode;
+    @Order(3)
+    DeploymentMode depMode;
 
     /** Deployment class name. */
-    private String depClsName;
+    @Order(4)
+    String depClsName;
 
     /** User version. */
-    private String userVer;
+    @Order(5)
+    String userVer;
 
     /** Node class loader participants. */
+    @Order(6)
     @GridToStringInclude
-    @GridDirectMap(keyType = UUID.class, valueType = IgniteUuid.class)
-    private Map<UUID, IgniteUuid> ldrParties;
+    Map<UUID, IgniteUuid> ldrParties;
 
     /** Message deployment. */
-    @GridDirectTransient
     private GridDeployment dep;
 
     /**
@@ -110,7 +104,7 @@ public class GridIoUserMessage implements Message {
     }
 
     /**
-     * Default constructor, required for {@link Externalizable}.
+     * Default constructor.
      */
     public GridIoUserMessage() {
         // No-op.
@@ -208,150 +202,8 @@ public class GridIoUserMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeByteArray("bodyBytes", bodyBytes))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeIgniteUuid("clsLdrId", clsLdrId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeString("depClsName", depClsName))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeByte("depMode", depMode != null ? (byte)depMode.ordinal() : -1))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeMap("ldrParties", ldrParties, MessageCollectionItemType.UUID, MessageCollectionItemType.IGNITE_UUID))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeByteArray("topicBytes", topicBytes))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeString("userVer", userVer))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                bodyBytes = reader.readByteArray("bodyBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                clsLdrId = reader.readIgniteUuid("clsLdrId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                depClsName = reader.readString("depClsName");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                byte depModeOrd;
-
-                depModeOrd = reader.readByte("depMode");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                depMode = DeploymentMode.fromOrdinal(depModeOrd);
-
-                reader.incrementState();
-
-            case 4:
-                ldrParties = reader.readMap("ldrParties", MessageCollectionItemType.UUID, MessageCollectionItemType.IGNITE_UUID, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                topicBytes = reader.readByteArray("topicBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 6:
-                userVer = reader.readString("userVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridIoUserMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 9;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 7;
     }
 
     /** {@inheritDoc} */

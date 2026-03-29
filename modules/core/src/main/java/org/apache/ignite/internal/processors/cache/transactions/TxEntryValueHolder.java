@@ -17,10 +17,8 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridDirectTransient;
-import org.apache.ignite.internal.IgniteCodeGeneratingFail;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -29,8 +27,6 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
@@ -42,26 +38,24 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPD
 /**
  * Auxiliary class to hold value, value-has-been-set flag, value update operation, value bytes.
  */
-@IgniteCodeGeneratingFail // Need to handle 'hasWriteVal' flag during write.
 public class TxEntryValueHolder implements Message {
-    /** */
-    private static final long serialVersionUID = 0L;
-
-    /** */
+    /** Stored value. */
+    @Order(0)
     @GridToStringInclude(sensitive = true)
-    private CacheObject val;
+    @Nullable CacheObject val;
 
-    /** */
+    /** Cache operation. */
+    @Order(1)
     @GridToStringInclude
-    private GridCacheOperation op = NOOP;
+    GridCacheOperation op = NOOP;
 
     /** Flag indicating that value has been set for write. */
+    @Order(2)
     @GridToStringExclude
-    private boolean hasWriteVal;
+    boolean hasWriteVal;
 
     /** Flag indicating that value has been set for read. */
     @GridToStringExclude
-    @GridDirectTransient
     private boolean hasReadVal;
 
     /**
@@ -98,39 +92,28 @@ public class TxEntryValueHolder implements Message {
     }
 
     /**
-     * @param val Stored value.
-     */
-    public void value(@Nullable CacheObject val) {
-        this.val = val;
-    }
-
-    /**
-     * Gets cache operation.
-     *
      * @return Cache operation.
      */
-    public GridCacheOperation op() {
+    public GridCacheOperation operation() {
         return op;
     }
 
     /**
-     * Sets cache operation.
-     *
      * @param op Cache operation.
      */
-    public void op(GridCacheOperation op) {
+    public void operation(GridCacheOperation op) {
         this.op = op;
     }
 
     /**
-     * @return {@code True} if write value was set.
+     * @return Flag indicating that value has been set for write.
      */
     public boolean hasWriteValue() {
         return hasWriteVal;
     }
 
     /**
-     * @return {@code True} if read value was set.
+     * @return Flag indicating that value has been set for read.
      */
     public boolean hasReadValue() {
         return hasReadVal;
@@ -138,10 +121,9 @@ public class TxEntryValueHolder implements Message {
 
     /**
      * @param ctx Cache context.
-     * @throws org.apache.ignite.IgniteCheckedException If marshaling failed.
+     * @throws IgniteCheckedException If marshaling failed.
      */
-    public void marshal(GridCacheContext<?, ?> ctx)
-        throws IgniteCheckedException {
+    public void marshal(GridCacheContext<?, ?> ctx) throws IgniteCheckedException {
         if (hasWriteVal && val != null)
             val.prepareMarshal(ctx.cacheObjectContext());
     }
@@ -149,16 +131,11 @@ public class TxEntryValueHolder implements Message {
     /**
      * @param ctx Cache context.
      * @param ldr Class loader.
-     * @throws org.apache.ignite.IgniteCheckedException If unmarshalling failed.
+     * @throws IgniteCheckedException If unmarshalling failed.
      */
     public void unmarshal(CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
         if (hasWriteVal && val != null)
             val.finishUnmarshal(ctx, ldr);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -167,88 +144,7 @@ public class TxEntryValueHolder implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeBoolean("hasWriteVal", hasWriteVal))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeByte("op", op != null ? (byte)op.ordinal() : -1))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeMessage("val", hasWriteVal ? val : null))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                hasWriteVal = reader.readBoolean("hasWriteVal");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                byte opOrd;
-
-                opOrd = reader.readByte("op");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                op = GridCacheOperation.fromOrdinal(opOrd);
-
-                reader.incrementState();
-
-            case 2:
-                val = reader.readMessage("val");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(TxEntryValueHolder.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 101;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
     }
 }

@@ -107,7 +107,7 @@ public class IgniteClusterSnapshotDeltaTest extends AbstractSnapshotSelfTest {
 
         IgniteEx srv = startGridsWithCache(1, keys, (k) -> expPayload, ccfg);
 
-        String cacheDir = srv.context().pdsFolderResolver().fileTree().cacheStorage(ccfg).getName();
+        String cacheDir = srv.context().pdsFolderResolver().fileTree().defaultCacheStorage(ccfg).getName();
 
         if (sequentialWrite)
             injectSequentialWriteCheck(srv);
@@ -121,7 +121,7 @@ public class IgniteClusterSnapshotDeltaTest extends AbstractSnapshotSelfTest {
 
         mgr.localSnapshotSenderFactory(sft -> new DelegateSnapshotSender(log,
             mgr.snapshotExecutorService(), old.apply(sft)) {
-            @Override public void sendPart0(File from, File to, @Nullable String drName, GroupPartitionId pair, Long length) {
+            @Override public void sendPart0(File from, File to, @Nullable String storagePath, GroupPartitionId pair, Long length) {
                 if (cacheDir.equals(to.getParentFile().getName()))
                     partStart.countDown();
 
@@ -132,7 +132,7 @@ public class IgniteClusterSnapshotDeltaTest extends AbstractSnapshotSelfTest {
                     throw new RuntimeException(e);
                 }
 
-                super.sendPart0(from, to, drName, pair, length);
+                super.sendPart0(from, to, storagePath, pair, length);
             }
 
             @Override public void sendDelta0(File delta, File snpPart, GroupPartitionId pair) {

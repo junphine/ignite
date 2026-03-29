@@ -17,11 +17,12 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.io.DataInput;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.igfs.common.IgfsMessage;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.DataInput;
 
 /**
  * IGFS server message handler. Server component that is plugged in to the server implementation

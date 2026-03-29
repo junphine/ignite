@@ -17,31 +17,17 @@
 
 package org.apache.ignite.igfs.secondary.local;
 
-import java.util.ArrayList;
-import java.nio.file.attribute.BasicFileAttributeView;
-import java.nio.file.attribute.FileTime;
-import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.igfs.IgfsBlockLocation;
-import org.apache.ignite.igfs.IgfsException;
-import org.apache.ignite.igfs.IgfsFile;
-import org.apache.ignite.igfs.IgfsPath;
-import org.apache.ignite.igfs.IgfsPathAlreadyExistsException;
-import org.apache.ignite.igfs.IgfsPathIsNotDirectoryException;
-import org.apache.ignite.igfs.IgfsPathNotFoundException;
+import org.apache.ignite.igfs.*;
 import org.apache.ignite.igfs.secondary.IgfsSecondaryFileSystem;
 import org.apache.ignite.igfs.secondary.IgfsSecondaryFileSystemPositionedReadable;
+import org.apache.ignite.internal.processors.igfs.IgfsBlockLocationImpl;
 import org.apache.ignite.internal.processors.igfs.IgfsDataManager;
 import org.apache.ignite.internal.processors.igfs.IgfsImpl;
-import org.apache.ignite.internal.processors.igfs.secondary.local.LocalFileSystemBlockKey;
 import org.apache.ignite.internal.processors.igfs.IgfsUtils;
-import org.apache.ignite.internal.processors.igfs.IgfsBlockLocationImpl;
-import org.apache.ignite.internal.processors.igfs.secondary.local.LocalFileSystemIgfsFile;
-import org.apache.ignite.internal.processors.igfs.secondary.local.LocalFileSystemSizeVisitor;
-import org.apache.ignite.internal.processors.igfs.secondary.local.LocalFileSystemUtils;
-import org.apache.ignite.internal.processors.igfs.secondary.local.LocalFileSystemPositionedReadable;
+import org.apache.ignite.internal.processors.igfs.secondary.local.*;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lifecycle.LifecycleAware;
@@ -49,20 +35,19 @@ import org.apache.ignite.resources.FileSystemResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFileAttributes;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Secondary file system which delegates to local file system.

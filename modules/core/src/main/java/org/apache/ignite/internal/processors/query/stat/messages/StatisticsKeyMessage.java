@@ -17,21 +17,17 @@
 
 package org.apache.ignite.internal.processors.query.stat.messages;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
-import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Key, describing the object of statistics. For example: table with some columns.
  */
-public class StatisticsKeyMessage implements Message {
+public class StatisticsKeyMessage implements Message, Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -39,17 +35,19 @@ public class StatisticsKeyMessage implements Message {
     public static final short TYPE_CODE = 183;
 
     /** Object schema. */
-    private String schema;
+    @Order(0)
+    String schema;
 
     /** Object name. */
-    private String obj;
+    @Order(1)
+    String obj;
 
     /** Optional list of columns to collect statistics by. */
-    @GridDirectCollection(String.class)
-    private List<String> colNames;
+    @Order(2)
+    List<String> colNames;
 
     /**
-     * {@link Externalizable} support.
+     * Empty constructor.
      */
     public StatisticsKeyMessage() {
         // No-op.
@@ -90,90 +88,8 @@ public class StatisticsKeyMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeCollection("colNames", colNames, MessageCollectionItemType.STRING))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeString("obj", obj))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeString("schema", schema))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                colNames = reader.readCollection("colNames", MessageCollectionItemType.STRING);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                obj = reader.readString("obj");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                schema = reader.readString("schema");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(StatisticsKeyMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return TYPE_CODE;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-
     }
 
     /** {@inheritDoc} */

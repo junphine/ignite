@@ -17,41 +17,32 @@
 
 package org.apache.ignite.internal.processors.query.calcite.metadata;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.ignite.internal.GridDirectMap;
-import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.query.calcite.message.MarshalableMessage;
+import org.apache.ignite.internal.processors.query.calcite.message.CalciteMarshalableMessage;
 import org.apache.ignite.internal.processors.query.calcite.message.MessageType;
-import org.apache.ignite.internal.util.UUIDCollectionMessage;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /** */
-public class FragmentDescription implements MarshalableMessage {
+public class FragmentDescription implements CalciteMarshalableMessage {
     /** */
-    private long fragmentId;
+    @Order(0)
+    long fragmentId;
 
     /** */
-    private FragmentMapping mapping;
+    @Order(1)
+    FragmentMapping mapping;
 
     /** */
-    private ColocationGroup target;
+    @Order(2)
+    Map<Long, List<UUID>> remoteSources;
 
     /** */
-    @GridDirectTransient
-    private Map<Long, List<UUID>> remoteSources;
-
-    /** */
-    @GridDirectMap(keyType = Long.class, valueType = Message.class)
-    private Map<Long, UUIDCollectionMessage> remoteSources0;
+    @Order(3)
+    ColocationGroup target;
 
     /** */
     public FragmentDescription() {
@@ -72,6 +63,11 @@ public class FragmentDescription implements MarshalableMessage {
     }
 
     /** */
+    public void fragmentId(long fragmentId) {
+        this.fragmentId = fragmentId;
+    }
+
+    /** */
     public List<UUID> nodeIds() {
         return mapping.nodeIds();
     }
@@ -79,6 +75,11 @@ public class FragmentDescription implements MarshalableMessage {
     /** */
     public ColocationGroup target() {
         return target;
+    }
+
+    /** */
+    public void target(ColocationGroup target) {
+        this.target = target;
     }
 
     /** */
@@ -91,134 +92,32 @@ public class FragmentDescription implements MarshalableMessage {
         return mapping;
     }
 
+    /** */
+    public void mapping(FragmentMapping mapping) {
+        this.mapping = mapping;
+    }
+
     /** {@inheritDoc} */
     @Override public MessageType type() {
         return MessageType.FRAGMENT_DESCRIPTION;
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeLong("fragmentId", fragmentId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeMessage("mapping", mapping))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeMap("remoteSources0", remoteSources0, MessageCollectionItemType.LONG, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeMessage("target", target))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                fragmentId = reader.readLong("fragmentId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                mapping = reader.readMessage("mapping");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                remoteSources0 = reader.readMap("remoteSources0", MessageCollectionItemType.LONG, MessageCollectionItemType.MSG, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                target = reader.readMessage("target");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(FragmentDescription.class);
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 4;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void prepareMarshal(GridCacheSharedContext<?, ?> ctx) {
-        if (mapping != null)
-            mapping.prepareMarshal(ctx);
-
+    @Override public void prepareMarshal(GridCacheSharedContext<?, ?> ctx) throws IgniteCheckedException {
         if (target != null) {
             target = target.explicitMapping();
 
             target.prepareMarshal(ctx);
         }
 
-        if (remoteSources0 == null && remoteSources != null) {
-            remoteSources0 = U.newHashMap(remoteSources.size());
-
-            for (Map.Entry<Long, List<UUID>> e : remoteSources.entrySet())
-                remoteSources0.put(e.getKey(), new UUIDCollectionMessage(e.getValue()));
-        }
+        if (mapping != null)
+            mapping.prepareMarshal(ctx);
     }
 
     /** {@inheritDoc} */
-    @Override public void prepareUnmarshal(GridCacheSharedContext<?, ?> ctx) {
-        if (mapping != null)
-            mapping.prepareUnmarshal(ctx);
+    @Override public void prepareUnmarshal(GridCacheSharedContext<?, ?> ctx) throws IgniteCheckedException {
+        target.prepareUnmarshal(ctx);
 
-        if (target != null)
-            target.prepareUnmarshal(ctx);
-
-        if (remoteSources == null && remoteSources0 != null) {
-            remoteSources = U.newHashMap(remoteSources0.size());
-
-            for (Map.Entry<Long, UUIDCollectionMessage> e : remoteSources0.entrySet())
-                remoteSources.put(e.getKey(), new ArrayList<>(e.getValue().uuids()));
-        }
+        mapping.prepareUnmarshal(ctx);
     }
 }

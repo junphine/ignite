@@ -17,16 +17,16 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
-import java.util.Collection;
 import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.*;
+
+import java.io.Externalizable;
+import java.nio.ByteBuffer;
+import java.util.Collection;
 
 /**
  * Fragmentizer request. Sent from coordinator to other IGFS nodes when colocated part of file
@@ -37,12 +37,14 @@ public class IgfsFragmentizerRequest extends IgfsCommunicationMessage {
     private static final long serialVersionUID = 0L;
 
     /** File id. */
-    private IgniteUuid fileId;
+    @Order(0)
+    IgniteUuid fileId;
 
     /** Ranges to fragment. */
     @GridToStringInclude
     @GridDirectCollection(IgfsFileAffinityRange.class)
-    private Collection<IgfsFileAffinityRange> fragmentRanges;
+    @Order(1)
+    Collection<IgfsFileAffinityRange> fragmentRanges;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -74,87 +76,15 @@ public class IgfsFragmentizerRequest extends IgfsCommunicationMessage {
         return fragmentRanges;
     }
 
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(IgfsFragmentizerRequest.class, this);
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeIgniteUuid("fileId", fileId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeCollection("fragmentRanges", fragmentRanges, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                fileId = reader.readIgniteUuid("fileId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                fragmentRanges = reader.readCollection("fragmentRanges", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(IgfsFragmentizerRequest.class);
-    }
 
     /** {@inheritDoc} */
     @Override public short directType() {
         return 69;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
     }
 }

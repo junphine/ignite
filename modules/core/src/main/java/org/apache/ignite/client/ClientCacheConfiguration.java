@@ -27,8 +27,11 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteExperimental;
+import org.jetbrains.annotations.Nullable;
 
 /** Cache configuration. */
 public final class ClientCacheConfiguration implements Serializable {
@@ -128,6 +131,27 @@ public final class ClientCacheConfiguration implements Serializable {
     /** @serial Expiry policy. */
     private ExpiryPolicy expiryPlc;
 
+    /** @serial Affinity configuration. */
+    private ClientAffinityConfiguration affCfg;
+
+    /**
+     * Root directories where partition files are stored.
+     * @see DataStorageConfiguration#setStoragePath(String)
+     * @see DataStorageConfiguration#setExtraStoragePaths(String[])
+     * @see CacheConfiguration#setStoragePaths(String...)
+     */
+    @IgniteExperimental
+    @Nullable private String[] storagePaths;
+
+    /**
+     * Root directory where index file are stored.
+     * @see DataStorageConfiguration#setStoragePath(String)
+     * @see DataStorageConfiguration#setExtraStoragePaths(String[])
+     * @see CacheConfiguration#setIndexPath(String)
+     */
+    @IgniteExperimental
+    @Nullable private String idxPath;
+
     /** Default constructor. */
     public ClientCacheConfiguration() {
         // No-op.
@@ -170,6 +194,9 @@ public final class ClientCacheConfiguration implements Serializable {
         sqlSchema = ccfg.getSqlSchema();
         statisticsEnabled = ccfg.isStatisticsEnabled();
         writeSynchronizationMode = ccfg.getWriteSynchronizationMode();
+        storagePaths = ccfg.getStoragePaths();
+        idxPath = ccfg.getIndexPath();
+        affCfg = ccfg.getAffinityConfiguration();
     }
 
     /**
@@ -766,6 +793,71 @@ public final class ClientCacheConfiguration implements Serializable {
      */
     public ClientCacheConfiguration setExpiryPolicy(ExpiryPolicy expiryPlc) {
         this.expiryPlc = expiryPlc;
+
+        return this;
+    }
+
+    /**
+     * Gets affinity configuration.
+     *
+     * @return Affinity configuration.
+     */
+    public ClientAffinityConfiguration getAffinityConfiguration() {
+        return affCfg;
+    }
+
+    /**
+     * Sets affinity configuration.
+     *
+     * @param affCfg Affinity configuration.
+     * @return {@code this} for chaining.
+     */
+    public ClientCacheConfiguration setAffinityConfiguration(ClientAffinityConfiguration affCfg) {
+        this.affCfg = affCfg;
+
+        return this;
+    }
+
+    /**
+     * @return A path to the root directory where the Persistent Store for cache group will persist data and indexes.
+     */
+    @IgniteExperimental
+    @Nullable public String[] getStoragePaths() {
+        return storagePaths;
+    }
+
+    /**
+     * Sets a path to the root directory where the Persistent Store will persist data.
+     * By default, the Persistent Store's files are located under {@link DataStorageConfiguration#getStoragePath()}.
+     *
+     * @param storagePaths Persistence store path.
+     * @return {@code this} for chaining.
+     */
+    @IgniteExperimental
+    public ClientCacheConfiguration setStoragePaths(String... storagePaths) {
+        this.storagePaths = storagePaths;
+
+        return this;
+    }
+
+    /**
+     * @return A path to the root directory where the Persistent Store for cache group will persist index.
+     */
+    @IgniteExperimental
+    @Nullable public String getIndexPath() {
+        return idxPath;
+    }
+
+    /**
+     * Sets a path to the root directory where the Persistent Store will persist index partition.
+     * By default, the Persistent Store's files are located under {@link DataStorageConfiguration#getStoragePath()}.
+     *
+     * @param idxPath Index path.
+     * @return {@code this} for chaining.
+     */
+    @IgniteExperimental
+    public ClientCacheConfiguration setIndexPath(String idxPath) {
+        this.idxPath = idxPath;
 
         return this;
     }

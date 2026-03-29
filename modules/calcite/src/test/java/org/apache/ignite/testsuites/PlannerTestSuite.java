@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.query.calcite.planner.CorrelatedSub
 import org.apache.ignite.internal.processors.query.calcite.planner.DataTypesPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.HashAggregatePlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.HashIndexSpoolPlannerTest;
+import org.apache.ignite.internal.processors.query.calcite.planner.HashJoinPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.IndexRebuildPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.IndexSearchBoundsPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.InlineIndexScanPlannerTest;
@@ -32,7 +33,8 @@ import org.apache.ignite.internal.processors.query.calcite.planner.JoinCommutePl
 import org.apache.ignite.internal.processors.query.calcite.planner.JoinWithUsingPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.LimitOffsetPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.MergeJoinPlannerTest;
-import org.apache.ignite.internal.processors.query.calcite.planner.PlannerTest;
+import org.apache.ignite.internal.processors.query.calcite.planner.PlanExecutionTest;
+import org.apache.ignite.internal.processors.query.calcite.planner.PlanSplitterTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.PlannerTimeoutTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.ProjectFilterScanMergePlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.RexSimplificationPlannerTest;
@@ -44,6 +46,7 @@ import org.apache.ignite.internal.processors.query.calcite.planner.StatisticsPla
 import org.apache.ignite.internal.processors.query.calcite.planner.TableDmlPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.TableFunctionPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.TableSpoolPlannerTest;
+import org.apache.ignite.internal.processors.query.calcite.planner.UncollectPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.UnionPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.UserDefinedViewsPlannerTest;
 import org.apache.ignite.internal.processors.query.calcite.planner.hints.HintsTestSuite;
@@ -55,7 +58,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    PlannerTest.class,
+    PlanExecutionTest.class,
+    PlanSplitterTest.class,
     CorrelatedNestedLoopJoinPlannerTest.class,
     TableSpoolPlannerTest.class,
     SortedIndexSpoolPlannerTest.class,
@@ -73,6 +77,7 @@ import org.junit.runners.Suite;
     JoinCommutePlannerTest.class,
     LimitOffsetPlannerTest.class,
     MergeJoinPlannerTest.class,
+    HashJoinPlannerTest.class,
     StatisticsPlannerTest.class,
     CorrelatedSubqueryPlannerTest.class,
     JoinWithUsingPlannerTest.class,
@@ -83,9 +88,10 @@ import org.junit.runners.Suite;
     InlineIndexScanPlannerTest.class,
     UserDefinedViewsPlannerTest.class,
     RexSimplificationPlannerTest.class,
+    SerializationPlannerTest.class,
+    UncollectPlannerTest.class,
 
     HintsTestSuite.class,
-    SerializationPlannerTest.class,
 })
 public class PlannerTestSuite {
 }

@@ -17,9 +17,10 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Abstract class for IGFS managers.

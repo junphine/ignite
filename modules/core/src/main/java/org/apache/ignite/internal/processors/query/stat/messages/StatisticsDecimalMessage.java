@@ -17,18 +17,17 @@
 
 package org.apache.ignite.internal.processors.query.stat.messages;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.util.Objects;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * H2 Decimal.
  */
-public class StatisticsDecimalMessage implements Message {
+public class StatisticsDecimalMessage implements Message, Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -36,10 +35,12 @@ public class StatisticsDecimalMessage implements Message {
     public static final short TYPE_CODE = 184;
 
     /** */
-    private int scale;
+    @Order(0)
+    int scale;
 
     /** */
-    private byte[] b;
+    @Order(1)
+    byte[] b;
 
     /**
      *
@@ -73,74 +74,8 @@ public class StatisticsDecimalMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeByteArray("b", b))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeInt("scale", scale))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                b = reader.readByteArray("b");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                scale = reader.readInt("scale");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-        }
-
-        return reader.afterMessageRead(StatisticsDecimalMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return TYPE_CODE;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */

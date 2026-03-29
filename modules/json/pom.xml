@@ -38,7 +38,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>ignite-core</artifactId>
-        </dependency>        
+        </dependency>
 
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -67,7 +67,6 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
 
         <dependency>

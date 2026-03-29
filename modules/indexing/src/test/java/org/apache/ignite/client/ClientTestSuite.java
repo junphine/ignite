@@ -22,7 +22,9 @@ import org.apache.ignite.internal.client.thin.AffinityMetricsTest;
 import org.apache.ignite.internal.client.thin.AtomicLongTest;
 import org.apache.ignite.internal.client.thin.BlockingTxOpsTest;
 import org.apache.ignite.internal.client.thin.CacheAsyncTest;
+import org.apache.ignite.internal.client.thin.CacheConfigurationTest;
 import org.apache.ignite.internal.client.thin.CacheEntryListenersTest;
+import org.apache.ignite.internal.client.thin.CacheExceptionsTest;
 import org.apache.ignite.internal.client.thin.ClusterApiTest;
 import org.apache.ignite.internal.client.thin.ClusterGroupClusterRestartTest;
 import org.apache.ignite.internal.client.thin.ClusterGroupTest;
@@ -35,6 +37,7 @@ import org.apache.ignite.internal.client.thin.InvokeTest;
 import org.apache.ignite.internal.client.thin.MetadataRegistrationTest;
 import org.apache.ignite.internal.client.thin.OptimizedMarshallerClassesCachedTest;
 import org.apache.ignite.internal.client.thin.RecoveryModeTest;
+import org.apache.ignite.internal.client.thin.ReliableChannelDuplicationTest;
 import org.apache.ignite.internal.client.thin.ReliableChannelTest;
 import org.apache.ignite.internal.client.thin.ServiceAwarenessTest;
 import org.apache.ignite.internal.client.thin.ServicesBinaryArraysTests;
@@ -43,6 +46,7 @@ import org.apache.ignite.internal.client.thin.ThinClientEnpointsDiscoveryTest;
 import org.apache.ignite.internal.client.thin.ThinClientNonTransactionalOperationsInTxTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessBalancingTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessDiscoveryTest;
+import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessMultiDcTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessResourceReleaseTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessStableTopologyTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessUnstableTopologyTest;
@@ -60,6 +64,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     ClientConfigurationTest.class,
     ClientCacheConfigurationTest.class,
+    ClientOrderedCollectionWarnTest.class,
     FunctionalTest.class,
     IgniteBinaryTest.class,
     LoadTest.class,
@@ -83,6 +88,7 @@ import org.junit.runners.Suite;
     ThinClientPartitionAwarenessResourceReleaseTest.class,
     ThinClientPartitionAwarenessDiscoveryTest.class,
     ThinClientPartitionAwarenessBalancingTest.class,
+    ThinClientPartitionAwarenessMultiDcTest.class,
     ThinClientNonTransactionalOperationsInTxTest.class,
     ReliableChannelTest.class,
     CacheAsyncTest.class,
@@ -103,7 +109,10 @@ import org.junit.runners.Suite;
     BlockingTxOpsTest.class,
     InvokeTest.class,
     ExtraColumnInH2RowsTest.class,
-    RecoveryModeTest.class
+    RecoveryModeTest.class,
+    ReliableChannelDuplicationTest.class,
+    CacheExceptionsTest.class,
+    CacheConfigurationTest.class,
 })
 public class ClientTestSuite {
     // No-op.

@@ -17,11 +17,9 @@
 
 package org.apache.ignite.internal.processors.cache.query.continuous;
 
-import java.nio.ByteBuffer;
 import javax.cache.event.EventType;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridCodegenConverter;
-import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfo;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -31,18 +29,14 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.plugin.extensions.communication.MarshallableMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Continuous query entry.
  */
-public class CacheContinuousQueryEntry implements GridCacheDeployable, Message {
-    /** */
-    private static final long serialVersionUID = 0L;
-
+public class CacheContinuousQueryEntry implements GridCacheDeployable, MarshallableMessage {
     /** */
     private static final byte BACKUP_ENTRY = 0b0001;
 
@@ -53,65 +47,64 @@ public class CacheContinuousQueryEntry implements GridCacheDeployable, Message {
     private static final byte KEEP_BINARY = 0b0100;
 
     /** */
-    private static final EventType[] EVT_TYPE_VALS = EventType.values();
+    @Order(0)
+    EventType evtType;
 
-    /**
-     * @param ord Event type ordinal value.
-     * @return Event type.
-     */
-    @Nullable public static EventType eventTypeFromOrdinal(int ord) {
-        return ord >= 0 && ord < EVT_TYPE_VALS.length ? EVT_TYPE_VALS[ord] : null;
-    }
-
-    /** */
-    @GridCodegenConverter(
-        type = byte.class,
-        get = "evtType != null ? (byte)evtType.ordinal() : -1",
-        set = "eventTypeFromOrdinal($val$)"
-    )
-    private EventType evtType;
+    /** Flags. */
+    @Order(1)
+    byte flags;
 
     /** Key. */
     @GridToStringInclude
-    @GridCodegenConverter(get = "isFiltered() ? null : key")
-    private KeyCacheObject key;
+    KeyCacheObject key;
+
+    /** */
+    @Order(2)
+    byte[] keyBytes;
 
     /** New value. */
     @GridToStringInclude
-    @GridCodegenConverter(get = "isFiltered() ? null : newVal")
-    private CacheObject newVal;
+    CacheObject newVal;
+
+    /** */
+    @Order(3)
+    byte[] newValBytes;
 
     /** Old value. */
     @GridToStringInclude
-    @GridCodegenConverter(get = "isFiltered() ? null : oldVal")
-    private CacheObject oldVal;
+    CacheObject oldVal;
+
+    /** */
+    @Order(4)
+    byte[] oldValBytes;
 
     /** Cache name. */
-    private int cacheId;
+    @Order(5)
+    int cacheId;
 
     /** Deployment info. */
     @GridToStringExclude
-    @GridDirectTransient
     private GridDeploymentInfo depInfo;
 
     /** Partition. */
-    private int part;
+    @Order(6)
+    int part;
 
     /** Update counter. */
-    private long updateCntr;
-
-    /** Flags. */
-    private byte flags;
+    @Order(7)
+    long updateCntr;
 
     /** */
     @GridToStringInclude
-    private AffinityTopologyVersion topVer;
+    @Order(8)
+    AffinityTopologyVersion topVer;
 
     /** */
-    private long filteredCnt;
+    @Order(9)
+    long filteredCnt;
 
     /**
-     * Required by {@link Message}.
+     * Empty constructor.
      */
     public CacheContinuousQueryEntry() {
         // No-op.
@@ -245,13 +238,6 @@ public class CacheContinuousQueryEntry implements GridCacheDeployable, Message {
     }
 
     /**
-     * @param topVer Topology version.
-     */
-    void topologyVersion(AffinityTopologyVersion topVer) {
-        this.topVer = topVer;
-    }
-
-    /**
      * @param filteredCnt Number of entries filtered before this entry.
      */
     void filteredCount(long filteredCnt) {
@@ -364,11 +350,6 @@ public class CacheContinuousQueryEntry implements GridCacheDeployable, Message {
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
     @Override public void prepare(GridDeploymentInfo depInfo) {
         this.depInfo = depInfo;
     }
@@ -384,182 +365,33 @@ public class CacheContinuousQueryEntry implements GridCacheDeployable, Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("cacheId", cacheId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeByte("evtType", evtType != null ? (byte)evtType.ordinal() : -1))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeLong("filteredCnt", filteredCnt))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeByte("flags", flags))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeMessage("key", isFiltered() ? null : key))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeMessage("newVal", isFiltered() ? null : newVal))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeMessage("oldVal", isFiltered() ? null : oldVal))
-                    return false;
-
-                writer.incrementState();
-
-            case 7:
-                if (!writer.writeInt("part", part))
-                    return false;
-
-                writer.incrementState();
-
-            case 8:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
-                    return false;
-
-                writer.incrementState();
-
-            case 9:
-                if (!writer.writeLong("updateCntr", updateCntr))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                cacheId = reader.readInt("cacheId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                evtType = eventTypeFromOrdinal(reader.readByte("evtType"));
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                filteredCnt = reader.readLong("filteredCnt");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                flags = reader.readByte("flags");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                key = reader.readMessage("key");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                newVal = reader.readMessage("newVal");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 6:
-                oldVal = reader.readMessage("oldVal");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 7:
-                part = reader.readInt("part");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 8:
-                topVer = reader.readAffinityTopologyVersion("topVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 9:
-                updateCntr = reader.readLong("updateCntr");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(CacheContinuousQueryEntry.class);
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 10;
-    }
-
-    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(CacheContinuousQueryEntry.class, this);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareMarshal(Marshaller marsh) throws IgniteCheckedException {
+        if (!isFiltered()) {
+            if (key != null)
+                keyBytes = marsh.marshal(key);
+
+            if (newVal != null)
+                newValBytes = marsh.marshal(newVal);
+
+            if (oldVal != null)
+                oldValBytes = marsh.marshal(oldVal);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishUnmarshal(Marshaller marsh, ClassLoader clsLdr) throws IgniteCheckedException {
+        if (keyBytes != null)
+            key = marsh.unmarshal(keyBytes, clsLdr);
+        
+        if (newValBytes != null)
+            newVal = marsh.unmarshal(newValBytes, clsLdr);
+        
+        if (oldValBytes != null)
+            oldVal = marsh.unmarshal(oldValBytes, clsLdr);
     }
 }

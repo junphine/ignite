@@ -71,11 +71,11 @@ public class ReliableChannelTest {
         ClientConfiguration ccfg = new ClientConfiguration().setAddresses(
             "127.0.0.1:10800", "127.0.0.1:10800", "127.0.0.1:10801");
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
 
         rc.channelsInit();
 
-        assertEquals(3, rc.getChannelHolders().size());
+        assertEquals(2, rc.getChannelHolders().size());
     }
 
     /**
@@ -85,7 +85,7 @@ public class ReliableChannelTest {
     public void testAddressWithoutPort() {
         ClientConfiguration ccfg = new ClientConfiguration().setAddresses("127.0.0.1");
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
 
         rc.channelsInit();
 
@@ -116,7 +116,7 @@ public class ReliableChannelTest {
         Set<String> usedChannels = new HashSet<>();
 
         for (int i = 0; i < 100; i++) {
-            ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+            ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
 
             rc.channelsInit();
 
@@ -140,11 +140,14 @@ public class ReliableChannelTest {
             .nextAddresesResponse("127.0.0.1:10803", "127.0.0.1:10803", "127.0.0.1:10806")
             .nextAddresesResponse("127.0.0.1:10803", "127.0.0.1:10803", "127.0.0.1:10803")
             .nextAddresesResponse("127.0.0.1:10803", "127.0.0.1:10803", "127.0.0.1:10804")
-            .nextAddresesResponse("127.0.0.1:10803", "127.0.0.1:10804", "127.0.0.1:10804")
-            .nextAddresesResponse("127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.1:10802");
+            .nextAddresesResponse("127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.1:10802")
+            .nextAddresesResponse("127.0.0.1:10807")
+            .nextAddresesResponse("127.0.0.1:10808", "127.0.0.1:10809", "127.0.0.1:10808")
+            .nextAddresesResponse("127.0.0.1:10810", "127.0.0.1:10808", "127.0.0.1:10809")
+            .nextAddresesResponse("127.0.0.1:10811", "127.0.0.1:10811", "127.0.0.1:10812", "127.0.0.1:10813");
 
         ClientConfiguration ccfg = new ClientConfiguration().setAddressesFinder(finder);
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
 
         Supplier<List<String>> holderAddrs = () -> rc.getChannelHolders().stream()
             .map(h -> F.first(h.getAddresses()).toString().replace("/<unresolved>", "")) // Replace unnecessary part on JDK 17.
@@ -163,15 +166,21 @@ public class ReliableChannelTest {
 
         assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10803", "127.0.0.1:10804", "127.0.0.1:10806"));
 
-        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10803", "127.0.0.1:10803", "127.0.0.1:10806"));
+        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10803", "127.0.0.1:10806"));
 
-        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10803", "127.0.0.1:10803", "127.0.0.1:10803"));
+        assertAddrReInitAndEqualsTo.accept(List.of("127.0.0.1:10803"));
 
-        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10803", "127.0.0.1:10803", "127.0.0.1:10804"));
-
-        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10803", "127.0.0.1:10804", "127.0.0.1:10804"));
+        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10803", "127.0.0.1:10804"));
 
         assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.1:10802"));
+
+        assertAddrReInitAndEqualsTo.accept(List.of("127.0.0.1:10807"));
+
+        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10808", "127.0.0.1:10809"));
+
+        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10808", "127.0.0.1:10809", "127.0.0.1:10810"));
+
+        assertAddrReInitAndEqualsTo.accept(Arrays.asList("127.0.0.1:10811", "127.0.0.1:10812", "127.0.0.1:10813"));
     }
 
     /**
@@ -200,17 +209,17 @@ public class ReliableChannelTest {
 
     /** */
     private void checkDoesNotReinit(ClientConfiguration ccfg) {
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
 
         rc.channelsInit();
 
-        List<ReliableChannel.ClientChannelHolder> originalChannels = rc.getChannelHolders();
-        List<ReliableChannel.ClientChannelHolder> copyOriginalChannels = new ArrayList<>(originalChannels);
+        List<ReliableChannelImpl.ClientChannelHolder> originalChannels = rc.getChannelHolders();
+        List<ReliableChannelImpl.ClientChannelHolder> copyOriginalChannels = new ArrayList<>(originalChannels);
 
         // Imitate topology change.
         rc.initChannelHolders();
 
-        List<ReliableChannel.ClientChannelHolder> newChannels = rc.getChannelHolders();
+        List<ReliableChannelImpl.ClientChannelHolder> newChannels = rc.getChannelHolders();
 
         assertSame(originalChannels, newChannels);
 
@@ -231,7 +240,7 @@ public class ReliableChannelTest {
                 .setAddresses(dfltAddrs)
                 .setPartitionAwarenessEnabled(false);
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
 
         rc.channelsInit();
 
@@ -257,24 +266,24 @@ public class ReliableChannelTest {
 
         ClientConfiguration ccfg = new ClientConfiguration().setAddressesFinder(finder);
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
 
         rc.channelsInit();
 
-        List<ReliableChannel.ClientChannelHolder> originChannels = Collections.unmodifiableList(rc.getChannelHolders());
+        List<ReliableChannelImpl.ClientChannelHolder> originChannels = Collections.unmodifiableList(rc.getChannelHolders());
 
         // Imitate topology change.
         rc.initChannelHolders();
 
-        assertEquals(2, F.size(originChannels, ReliableChannel.ClientChannelHolder::isClosed));
+        assertEquals(2, F.size(originChannels, ReliableChannelImpl.ClientChannelHolder::isClosed));
 
-        List<ReliableChannel.ClientChannelHolder> reuseChannel = originChannels.stream()
+        List<ReliableChannelImpl.ClientChannelHolder> reuseChannel = originChannels.stream()
             .filter(c -> !c.isClosed())
             .collect(Collectors.toList());
 
         assertEquals(1, reuseChannel.size());
 
-        List<ReliableChannel.ClientChannelHolder> newChannels = rc.getChannelHolders();
+        List<ReliableChannelImpl.ClientChannelHolder> newChannels = rc.getChannelHolders();
 
         assertEquals(2, newChannels.size());
 
@@ -296,7 +305,7 @@ public class ReliableChannelTest {
                 .setAddressesFinder(finder)
                 .setPartitionAwarenessEnabled(false);
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
 
         rc.channelsInit();
 
@@ -320,7 +329,7 @@ public class ReliableChannelTest {
             .setAddresses(dfltAddrs)
             .setPartitionAwarenessEnabled(true);
 
-        ReliableChannel rc = new ReliableChannel((cfg, hnd) -> new TestFailureClientChannel(), ccfg, null);
+        ReliableChannelImpl rc = new ReliableChannelImpl((cfg, hnd) -> new TestFailureClientChannel(), ccfg, null);
 
         rc.channelsInit();
     }
@@ -339,6 +348,27 @@ public class ReliableChannelTest {
                 throw new RuntimeException(e);
             }
         }, false);
+    }
+
+    /**
+     * Checks that channels' count remains the same in static configuration after reinitialization.
+     */
+    @Test
+    public void testChannelsCountRemainsAfterReinit() {
+        String[] addrs = {"127.0.0.1:10800", "127.0.0.1:10801"};
+        TestAddressFinder finder = new TestAddressFinder()
+            .nextAddresesResponse(addrs)
+            .nextAddresesResponse(addrs);
+
+        ClientConfiguration ccfg = new ClientConfiguration().setAddressesFinder(finder);
+        ReliableChannelImpl rc = new ReliableChannelImpl(chFactory, ccfg, null);
+
+        rc.channelsInit();
+        int initCnt = rc.getChannelHolders().size();
+
+        rc.initChannelHolders();
+
+        assertEquals(initCnt, rc.getChannelHolders().size());
     }
 
     /**
@@ -365,7 +395,7 @@ public class ReliableChannelTest {
         // Emulate cluster is down after TcpClientChannel#send operation.
         AtomicInteger step = new AtomicInteger();
 
-        ReliableChannel rc = new ReliableChannel((cfg, hnd) -> {
+        ReliableChannelImpl rc = new ReliableChannelImpl((cfg, hnd) -> {
             if (step.getAndIncrement() == 0)
                 return new TestAsyncServiceFailureClientChannel();
             else
@@ -379,7 +409,7 @@ public class ReliableChannelTest {
         ClientBinaryMarshaller marsh = mock(ClientBinaryMarshaller.class);
         TcpClientTransactions transactions = mock(TcpClientTransactions.class);
 
-        TcpClientCache cache = new TcpClientCache("", rc, marsh, transactions, null, false, null);
+        TcpClientCache cache = new TcpClientCache("", rc, marsh, transactions, null, null);
 
         GridTestUtils.assertThrowsWithCause(() -> op.accept(cache), TestChannelException.class);
     }

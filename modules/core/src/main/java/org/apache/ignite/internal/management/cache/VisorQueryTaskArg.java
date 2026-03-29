@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -34,31 +35,40 @@ public class VisorQueryTaskArg extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** Cache name for query. */
-    private String cacheName;
+    @Order(0)
+    String cacheName;
 
     /** Query text. */
-    private String qryTxt;
+    @Order(1)
+    String qryTxt;
 
     /** Distributed joins enabled flag. */
-    private boolean distributedJoins;
+    @Order(2)
+    boolean distributedJoins;
 
     /** Enforce join order flag. */
-    private boolean enforceJoinOrder;
+    @Order(3)
+    boolean enforceJoinOrder;
 
     /** Query contains only replicated tables flag.*/
-    private boolean replicatedOnly;
+    @Order(4)
+    boolean replicatedOnly;
 
     /** Flag whether to execute query locally. */
-    private boolean loc;
+    @Order(5)
+    boolean loc;
 
     /** Result batch size. */
-    private int pageSize;
+    @Order(6)
+    int pageSize;
 
     /** Lazy query execution flag */
-    private boolean lazy;
+    @Order(7)
+    boolean lazy;
 
     /** Collocation flag. */
-    private boolean collocated;
+    @Order(8)
+    boolean collocated;
 
     /**
      * Default constructor.
@@ -213,7 +223,7 @@ public class VisorQueryTaskArg extends IgniteDataTransferObject {
 
    
     /** {@inheritDoc} */
-    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
         U.writeString(out, cacheName);
         U.writeString(out, qryTxt);
         out.writeBoolean(distributedJoins);
@@ -225,7 +235,7 @@ public class VisorQueryTaskArg extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         cacheName = U.readString(in);
         qryTxt = U.readString(in);
         distributedJoins = in.readBoolean();

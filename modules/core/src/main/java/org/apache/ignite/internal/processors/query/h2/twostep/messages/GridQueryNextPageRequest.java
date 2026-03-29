@@ -17,33 +17,33 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep.messages;
 
-import java.nio.ByteBuffer;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Request to fetch next page.
  */
 public class GridQueryNextPageRequest implements Message {
     /** */
-    private static final long serialVersionUID = 0L;
+    @Order(0)
+    long qryReqId;
 
     /** */
-    private long qryReqId;
+    @Order(1)
+    int segmentId;
 
     /** */
-    private int segmentId;
+    @Order(2)
+    int qry;
 
     /** */
-    private int qry;
+    @Order(3)
+    int pageSize;
 
     /** */
-    private int pageSize;
-
-    /** */
-    private byte flags;
+    @Order(4)
+    byte flags;
 
     /**
      * Default constructor.
@@ -70,7 +70,7 @@ public class GridQueryNextPageRequest implements Message {
     /**
      * @return Flags.
      */
-    public byte getFlags() {
+    public byte flags() {
         return flags;
     }
 
@@ -106,117 +106,7 @@ public class GridQueryNextPageRequest implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeByte("flags", flags))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeInt("pageSize", pageSize))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeInt("qry", qry))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeLong("qryReqId", qryReqId))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeInt("segmentId", segmentId))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                flags = reader.readByte("flags");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                pageSize = reader.readInt("pageSize");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                qry = reader.readInt("qry");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                qryReqId = reader.readLong("qryReqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                segmentId = reader.readInt("segmentId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridQueryNextPageRequest.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 108;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 5;
     }
 }

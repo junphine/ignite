@@ -17,7 +17,6 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -29,7 +28,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
-import org.apache.ignite.internal.util.UUIDCollectionMessage;
+import org.apache.ignite.internal.util.GridByteArrayList;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -38,7 +37,7 @@ import org.apache.ignite.spi.communication.tcp.internal.CommunicationWorker;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
-import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.TestDependencyResolver;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -103,7 +102,7 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
 
             nearNode.configuration().getCommunicationSpi().sendMessage(
                 incomingNode.localNode(),
-                UUIDCollectionMessage.of(UUID.randomUUID())
+                new GridByteArrayList()
             );
 
             // Check
@@ -224,7 +223,7 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
                 }
 
                 @Override public void onMessage(GridNioSession ses, Message msg) {
-                    if (rejectHandshake.get() && msg instanceof HandshakeMessage2) {
+                    if (rejectHandshake.get() && msg instanceof HandshakeMessage) {
                         rejectHandshake.set(false);
 
                         ses.close();

@@ -17,18 +17,20 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.plugin.extensions.communication.MarshallableMessage;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.ByteBuffer;
+
 /**
  * Base class for all IGFS communication messages sent between nodes.
  */
-public abstract class IgfsCommunicationMessage implements Message {
+public abstract class IgfsCommunicationMessage implements MarshallableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -36,7 +38,7 @@ public abstract class IgfsCommunicationMessage implements Message {
      * @param marsh Marshaller.
      * @throws IgniteCheckedException In case of error.
      */
-    public void prepareMarshal(Marshaller marsh) throws IgniteCheckedException {
+    @Override public void prepareMarshal(Marshaller marsh) throws IgniteCheckedException {
         // No-op.
     }
 
@@ -45,36 +47,8 @@ public abstract class IgfsCommunicationMessage implements Message {
      * @param ldr Class loader.
      * @throws IgniteCheckedException In case of error.
      */
-    public void finishUnmarshal(Marshaller marsh, @Nullable ClassLoader ldr) throws IgniteCheckedException {
+    @Override public void finishUnmarshal(Marshaller marsh, @Nullable ClassLoader ldr) throws IgniteCheckedException {
         // No-op.
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        return reader.afterMessageRead(IgfsCommunicationMessage.class);
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 0;
-    }
 }

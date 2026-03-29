@@ -17,11 +17,13 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+
+import java.io.Externalizable;
+import java.nio.ByteBuffer;
 
 /**
  * Fragmentizer response.
@@ -31,7 +33,8 @@ public class IgfsFragmentizerResponse extends IgfsCommunicationMessage {
     private static final long serialVersionUID = 0L;
 
     /** File ID. */
-    private IgniteUuid fileId;
+    @Order(0)
+    IgniteUuid fileId;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -55,67 +58,8 @@ public class IgfsFragmentizerResponse extends IgfsCommunicationMessage {
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeIgniteUuid("fileId", fileId))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                fileId = reader.readIgniteUuid("fileId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(IgfsFragmentizerResponse.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 70;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 1;
-    }
 }

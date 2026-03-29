@@ -17,26 +17,23 @@
 
 package org.apache.ignite.internal.processors.authentication;
 
-import java.nio.ByteBuffer;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Message indicating that user operation is finished locally on the node.
  * Server nodes send this message to coordinator when the user operation is finished.
  */
 public class UserManagementOperationFinishedMessage implements Message {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Operation Id. */
-    private IgniteUuid opId;
+    @Order(0)
+    IgniteUuid opId;
 
     /** Error message. */
-    private String errorMsg;
+    @Order(1)
+    String errorMsg;
 
     /**
      *
@@ -55,7 +52,7 @@ public class UserManagementOperationFinishedMessage implements Message {
     }
 
     /**
-     * @return Operation ID,
+     * @return Operation ID.
      */
     public IgniteUuid operationId() {
         return opId;
@@ -76,76 +73,8 @@ public class UserManagementOperationFinishedMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeString("errorMsg", errorMsg))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeIgniteUuid("opId", opId))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                errorMsg = reader.readString("errorMsg");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                opId = reader.readIgniteUuid("opId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(UserManagementOperationFinishedMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 130;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op
     }
 
     /** {@inheritDoc} */

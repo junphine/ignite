@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.schema.operation;
 
 import java.util.UUID;
 
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -27,8 +28,12 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class SchemaCommandOperation extends SchemaAbstractOperation {
 	 /** */
     private static final long serialVersionUID = 0L;
-    
-	private String cmd;
+
+    @Order(0)
+	String cmd;
+
+    public SchemaCommandOperation() {}
+
     /**
      * Constructor.
      *
@@ -51,5 +56,10 @@ public class SchemaCommandOperation extends SchemaAbstractOperation {
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(SchemaCommandOperation.class, this, "parent", super.toString());
+    }
+
+    @Override
+    public short directType() {
+        return -116;
     }
 }

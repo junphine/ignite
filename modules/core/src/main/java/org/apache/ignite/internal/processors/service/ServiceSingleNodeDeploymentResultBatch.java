@@ -17,18 +17,13 @@
 
 package org.apache.ignite.internal.processors.service;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.NotNull;
-
-import static org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType.IGNITE_UUID;
-import static org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType.MSG;
 
 /**
  * Batch of service single node deployment result.
@@ -36,16 +31,15 @@ import static org.apache.ignite.plugin.extensions.communication.MessageCollectio
  * Contains collection of {@link ServiceSingleNodeDeploymentResult} mapped services ids.
  */
 public class ServiceSingleNodeDeploymentResultBatch implements Message {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Deployment process id. */
+    @Order(0)
     @GridToStringInclude
-    private ServiceDeploymentProcessId depId;
+    ServiceDeploymentProcessId depId;
 
     /** Services deployments results. */
+    @Order(1)
     @GridToStringInclude
-    private Map<IgniteUuid, ServiceSingleNodeDeploymentResult> results;
+    Map<IgniteUuid, ServiceSingleNodeDeploymentResult> results;
 
     /**
      * Empty constructor for marshalling purposes.
@@ -78,74 +72,8 @@ public class ServiceSingleNodeDeploymentResultBatch implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeMessage("depId", depId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeMap("results", results, IGNITE_UUID, MSG))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                depId = reader.readMessage("depId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                results = reader.readMap("results", IGNITE_UUID, MSG, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-        }
-
-        return reader.afterMessageRead(ServiceSingleNodeDeploymentResultBatch.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 168;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */

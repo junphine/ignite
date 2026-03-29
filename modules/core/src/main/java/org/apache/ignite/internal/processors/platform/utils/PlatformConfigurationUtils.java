@@ -68,6 +68,8 @@ import org.apache.ignite.configuration.ExecutorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.configuration.PlatformCacheConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
+import org.apache.ignite.configuration.SystemDataRegionConfiguration;
 import org.apache.ignite.configuration.ThinClientConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.configuration.WALMode;
@@ -275,7 +277,8 @@ public class PlatformConfigurationUtils {
                 if (in.readBoolean()) {
                     // Java cache plugin.
                     readCachePluginConfiguration(ccfg, in);
-                } else {
+                }
+                else {
                     // Platform cache plugin.
                     plugins.add(new PlatformCachePluginConfiguration(in.readObjectDetached()));
                 }
@@ -892,9 +895,6 @@ public class PlatformConfigurationUtils {
         }
 
         //if (in.readBoolean())
-        //    cfg.setMemoryConfiguration(readMemoryConfiguration(in));
-
-        //if (in.readBoolean())
         //    cfg.setSqlConnectorConfiguration(readSqlConnectorConfiguration(in));
 
         if (in.readBoolean())
@@ -902,9 +902,6 @@ public class PlatformConfigurationUtils {
 
         if (!in.readBoolean())  // ClientConnectorConfigurationEnabled override
             cfg.setClientConnectorConfiguration(null);
-
-        //if (in.readBoolean())
-        //    cfg.setPersistentStoreConfiguration(readPersistentStoreConfiguration(in));
 
         if (in.readBoolean())
             cfg.setDataStorageConfiguration(readDataStorageConfiguration(in));
@@ -1349,7 +1346,8 @@ public class PlatformConfigurationUtils {
         if (cfg.getSystemWorkerBlockedTimeout() != null) {
             w.writeBoolean(true);
             w.writeLong(cfg.getSystemWorkerBlockedTimeout());
-        } else {
+        }
+        else {
             w.writeBoolean(false);
         }
         w.writeBoolean(true);
@@ -1500,16 +1498,12 @@ public class PlatformConfigurationUtils {
             w.writeLong(((MemoryEventStorageSpi)evtStorageSpi).getExpireCount());
             w.writeLong(((MemoryEventStorageSpi)evtStorageSpi).getExpireAgeMs());
         }
-
-        //writeMemoryConfiguration(w, cfg.getMemoryConfiguration());
-
+        
         //writeSqlConnectorConfiguration(w, cfg.getSqlConnectorConfiguration());
 
         writeClientConnectorConfiguration(w, cfg.getClientConnectorConfiguration());
 
         w.writeBoolean(cfg.getClientConnectorConfiguration() != null);
-
-        //writePersistentStoreConfiguration(w, cfg.getPersistentStoreConfiguration());
 
         writeDataStorageConfiguration(w, cfg.getDataStorageConfiguration());
 
@@ -1535,7 +1529,8 @@ public class PlatformConfigurationUtils {
             w.writeBoolean(((StopNodeOrHaltFailureHandler)failureHnd).tryStop());
 
             w.writeLong(((StopNodeOrHaltFailureHandler)failureHnd).timeout());
-        } else
+        }
+        else
             w.writeBoolean(false);
 
         ExecutorConfiguration[] execCfgs = cfg.getExecutorConfiguration();
@@ -1547,7 +1542,8 @@ public class PlatformConfigurationUtils {
                 w.writeString(execCfg.getName());
                 w.writeInt(execCfg.getSize());
             }
-        } else
+        }
+        else
             w.writeInt(0);
 
         w.writeString(cfg.getIgniteHome());
@@ -1806,6 +1802,7 @@ public class PlatformConfigurationUtils {
             cfg.setThinClientConfiguration(new ThinClientConfiguration()
                 .setMaxActiveTxPerConnection(in.readInt())
                 .setMaxActiveComputeTasksPerConnection(in.readInt())
+                .sendServerExceptionStackTraceToClient(in.readBoolean())
             );
         }
 
@@ -1845,14 +1842,15 @@ public class PlatformConfigurationUtils {
                 w.writeBoolean(true);
                 w.writeInt(thinCfg.getMaxActiveTxPerConnection());
                 w.writeInt(thinCfg.getMaxActiveComputeTasksPerConnection());
+                w.writeBoolean(thinCfg.sendServerExceptionStackTraceToClient());
             }
             else
                 w.writeBoolean(false);
-        } else
+        }
+        else
             w.writeBoolean(false);
     }
 
-    
     /**
      * Reads the data storage configuration.
      *
@@ -1912,6 +1910,9 @@ public class PlatformConfigurationUtils {
         if (in.readBoolean())
             res.setDefaultDataRegionConfiguration(readDataRegionConfiguration(in));
 
+        if (in.readBoolean())
+            res.setSystemDataRegionConfiguration(readSystemDataRegionConfiguration(in));
+
         return res;
     }
 
@@ -1946,7 +1947,6 @@ public class PlatformConfigurationUtils {
 
         return f;
     }
-
 
     /**
      * Writes the data storage configuration.
@@ -2020,6 +2020,13 @@ public class PlatformConfigurationUtils {
             }
             else
                 w.writeBoolean(false);
+
+            if (cfg.getSystemDataRegionConfiguration() != null) {
+                w.writeBoolean(true);
+                writeSystemDataRegionConfiguration(w, cfg.getSystemDataRegionConfiguration());
+            }
+            else
+                w.writeBoolean(false);
         }
         else
             w.writeBoolean(false);
@@ -2047,6 +2054,20 @@ public class PlatformConfigurationUtils {
         w.writeLong(cfg.getMetricsRateTimeInterval());
         w.writeLong(cfg.getCheckpointPageBufferSize());
         w.writeBoolean(cfg.isLazyMemoryAllocation());
+    }
+
+    /**
+     * Writes the system data region configuration.
+     *
+     * @param w Writer.
+     * @param cfg System data region configuration.
+     */
+    private static void writeSystemDataRegionConfiguration(BinaryRawWriter w, SystemDataRegionConfiguration cfg) {
+        assert w != null;
+        assert cfg != null;
+
+        w.writeLong(cfg.getInitialSize());
+        w.writeLong(cfg.getMaxSize());
     }
 
     /**
@@ -2105,6 +2126,19 @@ public class PlatformConfigurationUtils {
         cfg.setLazyMemoryAllocation(r.readBoolean());
 
         return cfg;
+    }
+
+    /**
+     * Reads the system data region configuration.
+     *
+     * @param r Reader.
+     */
+    private static SystemDataRegionConfiguration readSystemDataRegionConfiguration(BinaryRawReader r) {
+        assert r != null;
+
+        return new SystemDataRegionConfiguration()
+                .setInitialSize(r.readLong())
+                .setMaxSize(r.readLong());
     }
 
     /**

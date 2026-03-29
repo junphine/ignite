@@ -34,17 +34,13 @@
     <bean id="igfs.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
         <property name="igniteInstanceName" value="igfs" />
         <property name="autoActivationEnabled" value="true" />
-        <property name="marshaller">
-            <bean class="org.apache.ignite.internal.binary.BinaryMarshaller" />
-        </property>
-		
 		
 		<!-- Enabling Apache Ignite Persistent Store. -->
         <property name="dataStorageConfiguration">
             <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
                 <property name="defaultDataRegionConfiguration">
                     <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
-                        <property name="persistenceEnabled" value="true"/>
+                        <property name="persistenceEnabled" value="false"/>
                     </bean>
                 </property>
             </bean>
@@ -74,16 +70,7 @@
                     </property>
                     -->
 
-                    <!--
-                        Example of configured shared memory endpoint.
-                    -->
-                    <!--
-                    <property name="ipcEndpointConfiguration">
-                        <bean class="org.apache.ignite.igfs.IgfsIpcEndpointConfiguration">
-                            <property name="type" value="SHMEM" />
-                        </bean>
-                    </property>
-                    -->
+
                 </bean>
             </list>
         </property>

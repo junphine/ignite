@@ -17,27 +17,28 @@
 
 package org.apache.ignite.internal.processors.query.calcite.message;
 
-import java.nio.ByteBuffer;
 import java.util.UUID;
-
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.internal.Order;
 
 /**
  *
  */
 public class QueryBatchAcknowledgeMessage implements ExecutionContextAware {
     /** */
-    private UUID queryId;
+    @Order(0)
+    UUID qryId;
 
     /** */
-    private long fragmentId;
+    @Order(1)
+    long fragmentId;
 
     /** */
-    private long exchangeId;
+    @Order(2)
+    long exchangeId;
 
     /** */
-    private int batchId;
+    @Order(3)
+    int batchId;
 
     /** */
     public QueryBatchAcknowledgeMessage() {
@@ -45,8 +46,8 @@ public class QueryBatchAcknowledgeMessage implements ExecutionContextAware {
     }
 
     /** */
-    public QueryBatchAcknowledgeMessage(UUID queryId, long fragmentId, long exchangeId, int batchId) {
-        this.queryId = queryId;
+    public QueryBatchAcknowledgeMessage(UUID qryId, long fragmentId, long exchangeId, int batchId) {
+        this.qryId = qryId;
         this.fragmentId = fragmentId;
         this.exchangeId = exchangeId;
         this.batchId = batchId;
@@ -54,7 +55,7 @@ public class QueryBatchAcknowledgeMessage implements ExecutionContextAware {
 
     /** {@inheritDoc} */
     @Override public UUID queryId() {
-        return queryId;
+        return qryId;
     }
 
     /** {@inheritDoc} */
@@ -77,98 +78,7 @@ public class QueryBatchAcknowledgeMessage implements ExecutionContextAware {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("batchId", batchId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeLong("exchangeId", exchangeId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeLong("fragmentId", fragmentId))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeUuid("queryId", queryId))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                batchId = reader.readInt("batchId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                exchangeId = reader.readLong("exchangeId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                fragmentId = reader.readLong("fragmentId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                queryId = reader.readUuid("queryId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(QueryBatchAcknowledgeMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public MessageType type() {
         return MessageType.QUERY_ACKNOWLEDGE_MESSAGE;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 4;
     }
 }

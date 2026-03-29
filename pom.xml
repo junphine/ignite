@@ -41,6 +41,8 @@
         <module>modules/tools</module>
         <module>modules/commons</module>
         <module>modules/binary/api</module>
+        <module>modules/binary/impl</module>
+        <module>modules/unsafe</module>
         <module>modules/core</module>
         <module>modules/igfs</module>
         <module>modules/compress</module>
@@ -75,7 +77,7 @@
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
                 <module>examples</module>
-                <module>modules/benchmarks</module>                
+                <module>modules/benchmarks</module>
                 <module>modules/ducktests</module>
                 <module>modules/numa-allocator</module>
                 <module>modules/schedule</module>
@@ -683,4 +685,3 @@
         </plugins>
     </build>
 </project>
-

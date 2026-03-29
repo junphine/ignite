@@ -17,9 +17,10 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
+
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Value object holding all local IGFS metrics which cannot be determined using file system traversal.

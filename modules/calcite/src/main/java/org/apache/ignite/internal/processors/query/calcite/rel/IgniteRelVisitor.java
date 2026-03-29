@@ -55,6 +55,11 @@ public interface IgniteRelVisitor<T> {
     T visit(IgniteNestedLoopJoin rel);
 
     /**
+     * See {@link IgniteRelVisitor#visit(IgniteRel)}.
+     */
+    T visit(IgniteHashJoin rel);
+
+    /**
      * See {@link IgniteRelVisitor#visit(IgniteRel)}
      */
     T visit(IgniteCorrelatedNestedLoopJoin rel);
@@ -179,6 +184,11 @@ public interface IgniteRelVisitor<T> {
      * See {@link IgniteRelVisitor#visit(IgniteRel)}
      */
     T visit(IgniteCollect rel);
+
+    /**
+     * See {@link IgniteRelVisitor#visit(IgniteRel)}
+     */
+    T visit(IgniteUncollect rel);
 
     /**
      * Visits a relational node and calculates a result on the basis of node meta information.

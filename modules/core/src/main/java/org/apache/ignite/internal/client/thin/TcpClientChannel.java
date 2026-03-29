@@ -51,8 +51,6 @@ import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.ClientReconnectedException;
 import org.apache.ignite.client.events.ConnectionDescription;
 import org.apache.ignite.configuration.ClientConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryReaderEx;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.BinaryWriterEx;
@@ -93,6 +91,7 @@ import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.AUTHORIZATION;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.BITMAP_FEATURES;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.PARTITION_AWARENESS;
+import static org.apache.ignite.internal.processors.platform.client.ClientStatus.SECURITY_VIOLATION;
 
 /**
  * Implements {@link ClientChannel} over TCP.
@@ -161,8 +160,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /** Executor for async operation listeners. */
     private final Executor asyncContinuationExecutor;
 
-    /** Send/receive timeout in milliseconds. */
-    private final int timeout;
+    /** Handshake timeout in milliseconds. */
+    private final int handshakeTimeout;
+
+    /** Request timeout in milliseconds. */
+    private final int reqTimeout;
 
     /** Heartbeat timer. */
     private final Timer heartbeatTimer;
@@ -196,7 +198,8 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         Executor cfgExec = cfg.getAsyncContinuationExecutor();
         asyncContinuationExecutor = cfgExec != null ? cfgExec : ForkJoinPool.commonPool();
 
-        timeout = cfg.getTimeout();
+        handshakeTimeout = cfg.getHandshakeTimeout();
+        reqTimeout = cfg.getRequestTimeout();
 
         List<InetSocketAddress> addrs = cfg.getAddresses();
 
@@ -420,7 +423,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         long startTimeNanos = pendingReq.startTimeNanos;
 
         try {
-            ByteBuffer payload = timeout > 0 ? pendingReq.get(timeout) : pendingReq.get();
+            ByteBuffer payload = reqTimeout > 0 ? pendingReq.get(reqTimeout) : pendingReq.get();
 
             T res = null;
             if (payload != null && payloadReader != null)
@@ -570,14 +573,13 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             err = null;
             res = msgSize > hdrSize ? buf : null;
         }
-        else if (status == ClientStatus.SECURITY_VIOLATION) {
-            err = new ClientAuthorizationException();
-            res = null;
-        }
         else {
             String errMsg = ClientUtils.createBinaryReader(null, dataInput).readString();
 
-            err = new ClientServerError(errMsg, status, resId);
+            err = status == SECURITY_VIOLATION
+                ? new ClientAuthorizationException(errMsg)
+                : new ClientServerError(errMsg, status, resId);
+
             res = null;
         }
 
@@ -715,9 +717,6 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         long reqId = -1L;
         long startTime = System.nanoTime();
 
-        eventListener.onHandshakeStart(new ConnectionDescription(sock.localAddress(), sock.remoteAddress(),
-            new ProtocolContext(ver).toString(), null));
-
         while (true) {
             ClientRequestFuture fut;
 
@@ -735,10 +734,13 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                 pendingReqsLock.readLock().unlock();
             }
 
+            eventListener.onHandshakeStart(new ConnectionDescription(sock.localAddress(), sock.remoteAddress(),
+                new ProtocolContext(ver).toString(), null));
+
             handshakeReq(ver, user, pwd, userAttrs);
 
             try {
-                ByteBuffer buf = timeout > 0 ? fut.get(timeout) : fut.get();
+                ByteBuffer buf = handshakeTimeout > 0 ? fut.get(handshakeTimeout) : fut.get();
 
                 BinaryInputStream res = BinaryStreams.inputStream(buf);
 
@@ -840,9 +842,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /** Send handshake request. */
     private void handshakeReq(ProtocolVersion proposedVer, String user, String pwd,
         Map<String, String> userAttrs) throws ClientConnectionException {
-        BinaryContext ctx = new BinaryContext(BinaryUtils.cachingMetadataHandler(), new IgniteConfiguration(), null);
-
-        try (BinaryWriterEx writer = BinaryUtils.writer(ctx, BinaryStreams.outputStream(32), null)) {
+        try (BinaryWriterEx writer = BinaryUtils.writer(U.binaryContext(null), BinaryStreams.outputStream(32), null)) {
             ProtocolContext protocolCtx = protocolContextFromVersion(proposedVer);
 
             writer.writeInt(0); // reserve an integer for the request size

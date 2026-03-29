@@ -17,40 +17,34 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
-import org.apache.ignite.internal.GridDirectTransient;
-import org.apache.ignite.internal.IgniteCodeGeneratingFail;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.plugin.extensions.communication.MarshallableMessage;
 
 /**
  * Partition update counters message.
  */
-@IgniteCodeGeneratingFail
-public class PartitionUpdateCountersMessage implements Message {
+public class PartitionUpdateCountersMessage implements MarshallableMessage {
     /** */
     private static final int ITEM_SIZE = 4 /* partition */ + 8 /* initial counter */ + 8 /* updates count */;
 
-    /** */
-    private static final long serialVersionUID = 193442457510062844L;
+    /** Byte representation of partition counters. */
+    @Order(0)
+    byte[] data;
 
     /** */
-    private byte data[];
+    @Order(1)
+    int cacheId;
 
     /** */
-    private int cacheId;
-
-    /** */
-    @GridDirectTransient
     private int size;
 
     /** Used for assigning counters to cache entries during tx finish. */
-    @GridDirectTransient
     private Map<Integer, Long> counters;
 
     /** */
@@ -91,7 +85,7 @@ public class PartitionUpdateCountersMessage implements Message {
         if (idx >= size)
             throw new ArrayIndexOutOfBoundsException();
 
-        long off = GridUnsafe.BYTE_ARR_OFF + idx * ITEM_SIZE;
+        long off = GridUnsafe.BYTE_ARR_OFF + (long)idx * ITEM_SIZE;
 
         return GridUnsafe.getInt(data, off);
     }
@@ -104,7 +98,7 @@ public class PartitionUpdateCountersMessage implements Message {
         if (idx >= size)
             throw new ArrayIndexOutOfBoundsException();
 
-        long off = GridUnsafe.BYTE_ARR_OFF + idx * ITEM_SIZE + 4;
+        long off = GridUnsafe.BYTE_ARR_OFF + (long)idx * ITEM_SIZE + 4;
 
         return GridUnsafe.getLong(data, off);
     }
@@ -117,7 +111,7 @@ public class PartitionUpdateCountersMessage implements Message {
         if (idx >= size)
             throw new ArrayIndexOutOfBoundsException();
 
-        long off = GridUnsafe.BYTE_ARR_OFF + idx * ITEM_SIZE + 12;
+        long off = GridUnsafe.BYTE_ARR_OFF + (long)idx * ITEM_SIZE + 12;
 
         return GridUnsafe.getLong(data, off);
     }
@@ -130,7 +124,7 @@ public class PartitionUpdateCountersMessage implements Message {
     public void add(int part, long init, long updatesCnt) {
         ensureSpace(size + 1);
 
-        long off = GridUnsafe.BYTE_ARR_OFF + size++ * ITEM_SIZE;
+        long off = GridUnsafe.BYTE_ARR_OFF + (long)size++ * ITEM_SIZE;
 
         GridUnsafe.putInt(data, off, part); off += 4;
         GridUnsafe.putLong(data, off, init); off += 8;
@@ -156,13 +150,6 @@ public class PartitionUpdateCountersMessage implements Message {
     }
 
     /**
-     * Clears message.
-     */
-    public void clear() {
-        size = 0;
-    }
-
-    /**
      * Check if there is enough space is allocated.
      *
      * @param newSize Size to ensure.
@@ -175,78 +162,8 @@ public class PartitionUpdateCountersMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("cacheId", cacheId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeByteArray("data", data, 0, size * ITEM_SIZE))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                cacheId = reader.readInt("cacheId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                data = reader.readByteArray("data");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                size = data.length / ITEM_SIZE;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(PartitionUpdateCountersMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 157;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -268,5 +185,15 @@ public class PartitionUpdateCountersMessage implements Message {
             ", size=" + size +
             ", cntrs=" + sb +
             '}';
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareMarshal(Marshaller marsh) throws IgniteCheckedException {
+        data = Arrays.copyOf(data, size * ITEM_SIZE);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishUnmarshal(Marshaller marsh, ClassLoader clsLdr) throws IgniteCheckedException {
+        size = data == null ? 0 : data.length / ITEM_SIZE;
     }
 }

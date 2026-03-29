@@ -32,10 +32,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 @IgniteCodeGeneratingFail
 public class IgniteIoTestMessage implements Message {
     /** */
-    private static byte FLAG_PROC_FROM_NIO = 1;
-
-    /** */
-    private static final long serialVersionUID = 0L;
+    private static final byte FLAG_PROC_FROM_NIO = 1;
 
     /** */
     private long id;
@@ -47,7 +44,7 @@ public class IgniteIoTestMessage implements Message {
     private boolean req;
 
     /** */
-    private byte payload[];
+    private byte[] payload;
 
     /** */
     private long reqCreateTs;
@@ -212,13 +209,6 @@ public class IgniteIoTestMessage implements Message {
     }
 
     /**
-     * @return Response process timestamp.
-     */
-    public long responseProcessTs() {
-        return resProcTs;
-    }
-
-    /**
      * @return Request send timestamp (millis).
      */
     public long requestSendTsMillis() {
@@ -230,13 +220,6 @@ public class IgniteIoTestMessage implements Message {
      */
     public long requestReceivedTsMillis() {
         return reqRcvTsMillis;
-    }
-
-    /**
-     * @return Response send timestamp (millis).
-     */
-    public long responseSendTsMillis() {
-        return resSndTsMillis;
     }
 
     /**
@@ -337,7 +320,7 @@ public class IgniteIoTestMessage implements Message {
         onBeforeWrite();
 
         if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
+            if (!writer.writeHeader(directType()))
                 return false;
 
             writer.onHeaderWritten();
@@ -345,91 +328,91 @@ public class IgniteIoTestMessage implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeByte("flags", flags))
+                if (!writer.writeByte(flags))
                     return false;
 
                 writer.incrementState();
 
             case 1:
-                if (!writer.writeLong("id", id))
+                if (!writer.writeLong(id))
                     return false;
 
                 writer.incrementState();
 
             case 2:
-                if (!writer.writeByteArray("payload", payload))
+                if (!writer.writeByteArray(payload))
                     return false;
 
                 writer.incrementState();
 
             case 3:
-                if (!writer.writeBoolean("req", req))
+                if (!writer.writeBoolean(req))
                     return false;
 
                 writer.incrementState();
 
             case 4:
-                if (!writer.writeLong("reqCreateTs", reqCreateTs))
+                if (!writer.writeLong(reqCreateTs))
                     return false;
 
                 writer.incrementState();
 
             case 5:
-                if (!writer.writeLong("reqProcTs", reqProcTs))
+                if (!writer.writeLong(reqProcTs))
                     return false;
 
                 writer.incrementState();
 
             case 6:
-                if (!writer.writeLong("reqRcvTs", reqRcvTs))
+                if (!writer.writeLong(reqRcvTs))
                     return false;
 
                 writer.incrementState();
 
             case 7:
-                if (!writer.writeLong("reqRcvTsMillis", reqRcvTsMillis))
+                if (!writer.writeLong(reqRcvTsMillis))
                     return false;
 
                 writer.incrementState();
 
             case 8:
-                if (!writer.writeLong("reqSndTs", reqSndTs))
+                if (!writer.writeLong(reqSndTs))
                     return false;
 
                 writer.incrementState();
 
             case 9:
-                if (!writer.writeLong("reqSndTsMillis", reqSndTsMillis))
+                if (!writer.writeLong(reqSndTsMillis))
                     return false;
 
                 writer.incrementState();
 
             case 10:
-                if (!writer.writeLong("resProcTs", resProcTs))
+                if (!writer.writeLong(resProcTs))
                     return false;
 
                 writer.incrementState();
 
             case 11:
-                if (!writer.writeLong("resRcvTs", resRcvTs))
+                if (!writer.writeLong(resRcvTs))
                     return false;
 
                 writer.incrementState();
 
             case 12:
-                if (!writer.writeLong("resRcvTsMillis", resRcvTsMillis))
+                if (!writer.writeLong(resRcvTsMillis))
                     return false;
 
                 writer.incrementState();
 
             case 13:
-                if (!writer.writeLong("resSndTs", resSndTs))
+                if (!writer.writeLong(resSndTs))
                     return false;
 
                 writer.incrementState();
 
             case 14:
-                if (!writer.writeLong("resSndTsMillis", resSndTsMillis))
+                if (!writer.writeLong(resSndTsMillis))
                     return false;
 
                 writer.incrementState();
@@ -443,12 +426,9 @@ public class IgniteIoTestMessage implements Message {
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         reader.setBuffer(buf);
 
-        if (!reader.beforeMessageRead())
-            return false;
-
         switch (reader.state()) {
             case 0:
-                flags = reader.readByte("flags");
+                flags = reader.readByte();
 
                 if (!reader.isLastRead())
                     return false;
@@ -456,7 +436,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 1:
-                id = reader.readLong("id");
+                id = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -464,7 +444,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 2:
-                payload = reader.readByteArray("payload");
+                payload = reader.readByteArray();
 
                 if (!reader.isLastRead())
                     return false;
@@ -472,7 +452,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 3:
-                req = reader.readBoolean("req");
+                req = reader.readBoolean();
 
                 if (!reader.isLastRead())
                     return false;
@@ -480,7 +460,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 4:
-                reqCreateTs = reader.readLong("reqCreateTs");
+                reqCreateTs = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -488,7 +468,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 5:
-                reqProcTs = reader.readLong("reqProcTs");
+                reqProcTs = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -496,7 +476,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 6:
-                reqRcvTs = reader.readLong("reqRcvTs");
+                reqRcvTs = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -504,7 +484,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 7:
-                reqRcvTsMillis = reader.readLong("reqRcvTsMillis");
+                reqRcvTsMillis = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -512,7 +492,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 8:
-                reqSndTs = reader.readLong("reqSndTs");
+                reqSndTs = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -520,7 +500,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 9:
-                reqSndTsMillis = reader.readLong("reqSndTsMillis");
+                reqSndTsMillis = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -528,7 +508,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 10:
-                resProcTs = reader.readLong("resProcTs");
+                resProcTs = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -536,7 +516,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 11:
-                resRcvTs = reader.readLong("resRcvTs");
+                resRcvTs = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -544,7 +524,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 12:
-                resRcvTsMillis = reader.readLong("resRcvTsMillis");
+                resRcvTsMillis = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -552,7 +532,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 13:
-                resSndTs = reader.readLong("resSndTs");
+                resSndTs = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -560,7 +540,7 @@ public class IgniteIoTestMessage implements Message {
                 reader.incrementState();
 
             case 14:
-                resSndTsMillis = reader.readLong("resSndTsMillis");
+                resSndTsMillis = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -571,22 +551,12 @@ public class IgniteIoTestMessage implements Message {
 
         onAfterRead();
 
-        return reader.afterMessageRead(IgniteIoTestMessage.class);
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public short directType() {
         return -43;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 15;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */

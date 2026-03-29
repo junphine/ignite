@@ -21,18 +21,15 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.nio.ByteBuffer;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
-import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
@@ -47,18 +44,20 @@ public class GridDhtPartitionExchangeId implements Message, Comparable<GridDhtPa
     private static final long serialVersionUID = 0L;
 
     /** Node ID. */
+    @Order(0)
     @GridToStringExclude
-    private UUID nodeId;
+    UUID nodeId;
 
     /** Event type. */
+    @Order(1)
     @GridToStringExclude
-    private int evt;
+    int evt;
 
     /** Topology version. */
-    private AffinityTopologyVersion topVer;
+    @Order(2)
+    AffinityTopologyVersion topVer;
 
     /** */
-    @GridDirectTransient
     private DiscoveryEvent discoEvt;
 
     /**
@@ -83,7 +82,7 @@ public class GridDhtPartitionExchangeId implements Message, Comparable<GridDhtPa
         assert discoEvt != null;
 
         this.nodeId = nodeId;
-        this.evt = discoEvt.type();
+        evt = discoEvt.type();
         this.topVer = topVer;
         this.discoEvt = discoEvt;
 
@@ -103,22 +102,6 @@ public class GridDhtPartitionExchangeId implements Message, Comparable<GridDhtPa
      */
     public UUID nodeId() {
         return nodeId;
-    }
-
-    /**
-     * @return Event.
-     */
-    public int event() {
-        return evt;
-    }
-
-    /**
-     * @return Discovery event timestamp.
-     */
-    long eventTimestamp() {
-        assert discoEvt != null;
-
-        return discoEvt.timestamp();
     }
 
     /**
@@ -173,11 +156,6 @@ public class GridDhtPartitionExchangeId implements Message, Comparable<GridDhtPa
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         U.writeUuid(out, nodeId);
         out.writeObject(topVer);
@@ -223,85 +201,8 @@ public class GridDhtPartitionExchangeId implements Message, Comparable<GridDhtPa
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("evt", evt))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeUuid("nodeId", nodeId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                evt = reader.readInt("evt");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                nodeId = reader.readUuid("nodeId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                topVer = reader.readAffinityTopologyVersion("topVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridDhtPartitionExchangeId.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 87;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
     }
 
     /** {@inheritDoc} */

@@ -45,11 +45,9 @@ public class GridClientAuthenticationRequest extends GridClientAbstractMessage {
         return cred;
     }
 
-    /**
-     * @param cred Credentials object.
-     */
-    public void credentials(SecurityCredentials cred) {
+    public GridClientAuthenticationRequest credentials(SecurityCredentials cred) {
         this.cred = cred;
+        return this;
     }
 
     /**
@@ -57,13 +55,6 @@ public class GridClientAuthenticationRequest extends GridClientAbstractMessage {
      */
     public Map<String, String> userAttributes() {
         return userAttrs;
-    }
-
-    /**
-     * @param userAttrs User attributes.
-     */
-    public void userAttributes(Map<String, String> userAttrs) {
-        this.userAttrs = userAttrs;
     }
 
     /** {@inheritDoc} */

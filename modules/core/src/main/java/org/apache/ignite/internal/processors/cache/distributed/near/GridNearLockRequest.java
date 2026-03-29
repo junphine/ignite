@@ -17,9 +17,8 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
 import java.util.UUID;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockRequest;
@@ -27,9 +26,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,9 +34,6 @@ import org.jetbrains.annotations.Nullable;
  * Near cache lock request to primary node. 'Near' means 'Initiating node' here, not 'Near Cache'.
  */
 public class GridNearLockRequest extends GridDistributedLockRequest {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** */
     private static final int NEED_RETURN_VALUE_FLAG_MASK = 0x01;
 
@@ -54,32 +47,40 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
     private static final int NEAR_CACHE_FLAG_MASK = 0x08;
 
     /** Topology version. */
-    private AffinityTopologyVersion topVer;
+    @Order(0)
+    AffinityTopologyVersion topVer;
 
     /** Mini future ID. */
-    private int miniId;
+    @Order(1)
+    int miniId;
 
     /** Array of mapped DHT versions for this entry. */
+    @Order(2)
     @GridToStringInclude
-    private GridCacheVersion[] dhtVers;
+    GridCacheVersion[] dhtVers;
 
     /** Task name hash. */
-    private int taskNameHash;
+    @Order(3)
+    int taskNameHash;
 
     /** TTL for create operation. */
-    private long createTtl;
+    @Order(4)
+    long createTtl;
 
     /** TTL for read operation. */
-    private long accessTtl;
+    @Order(5)
+    long accessTtl;
 
     /** */
-    private byte flags;
+    @Order(6)
+    byte flags;
 
     /** Transaction label. */
-    private String txLbl;
+    @Order(7)
+    String txLbl;
 
     /**
-     * Empty constructor required for {@link Externalizable}.
+     * Empty constructor.
      */
     public GridNearLockRequest() {
         // No-op.
@@ -106,7 +107,6 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
      * @param accessTtl TTL for read operation.
      * @param skipStore Skip store flag.
      * @param firstClientReq {@code True} if first lock request for lock operation sent from client node.
-     * @param addDepInfo Deployment info flag.
      * @param txLbl Transaction label.
      */
     public GridNearLockRequest(
@@ -129,10 +129,10 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
         long createTtl,
         long accessTtl,
         boolean skipStore,
+        boolean skipReadThrough,
         boolean keepBinary,
         boolean firstClientReq,
         boolean nearCache,
-        boolean addDepInfo,
         @Nullable String txLbl
     ) {
         super(
@@ -150,8 +150,8 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
             keyCnt,
             txSize,
             skipStore,
-            keepBinary,
-            addDepInfo);
+            skipReadThrough,
+            keepBinary);
 
         assert topVer.compareTo(AffinityTopologyVersion.ZERO) > 0;
 
@@ -219,7 +219,7 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
     }
 
     /**
-     * @return Task name hash.q
+     * @return Task name hash.
      */
     public int taskNameHash() {
         return taskNameHash;
@@ -297,160 +297,8 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 21:
-                if (!writer.writeLong("accessTtl", accessTtl))
-                    return false;
-
-                writer.incrementState();
-
-            case 22:
-                if (!writer.writeLong("createTtl", createTtl))
-                    return false;
-
-                writer.incrementState();
-
-            case 23:
-                if (!writer.writeObjectArray("dhtVers", dhtVers, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 24:
-                if (!writer.writeByte("flags", flags))
-                    return false;
-
-                writer.incrementState();
-
-            case 25:
-                if (!writer.writeInt("miniId", miniId))
-                    return false;
-
-                writer.incrementState();
-
-            case 26:
-                if (!writer.writeInt("taskNameHash", taskNameHash))
-                    return false;
-
-                writer.incrementState();
-
-            case 27:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
-                    return false;
-
-                writer.incrementState();
-
-            case 28:
-                if (!writer.writeString("txLbl", txLbl))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 21:
-                accessTtl = reader.readLong("accessTtl");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 22:
-                createTtl = reader.readLong("createTtl");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 23:
-                dhtVers = reader.readObjectArray("dhtVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 24:
-                flags = reader.readByte("flags");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 25:
-                miniId = reader.readInt("miniId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 26:
-                taskNameHash = reader.readInt("taskNameHash");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 27:
-                topVer = reader.readAffinityTopologyVersion("topVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 28:
-                txLbl = reader.readString("txLbl");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridNearLockRequest.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 51;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 29;
     }
 
     /** {@inheritDoc} */

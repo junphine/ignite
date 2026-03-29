@@ -17,11 +17,7 @@
 
 package org.apache.ignite.internal.igfs.common;
 
-import java.io.DataOutputStream;
-import java.io.FilterOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutput;
-import java.io.OutputStream;
+import java.io.*;
 
 /**
  * Data output stream implementing ObjectOutput but throwing exceptions on methods working with objects.

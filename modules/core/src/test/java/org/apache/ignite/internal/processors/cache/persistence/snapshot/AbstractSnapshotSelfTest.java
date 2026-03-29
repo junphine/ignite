@@ -68,7 +68,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.encryption.AbstractEncryptionTest;
-import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.record.IncrementalSnapshotFinishRecord;
@@ -89,6 +88,7 @@ import org.apache.ignite.internal.processors.marshaller.MappedName;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -175,24 +175,27 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
     @Parameterized.Parameter
     public boolean encryption;
 
-    /** . */
+    /** */
     @Parameterized.Parameter(1)
     public boolean onlyPrimary;
 
     /** Parameters. */
     @Parameterized.Parameters(name = "encryption={0}, onlyPrimay={1}")
     public static Collection<Object[]> params() {
-        boolean[] encVals = DISK_PAGE_COMPRESSION != DiskPageCompression.DISABLED
-            ? new boolean[] {false}
-            : new boolean[] {false, true};
-
         List<Object[]> res = new ArrayList<>();
 
-        for (boolean enc: encVals)
-            for (boolean onlyPrimary: new boolean[] {true, false})
-                res.add(new Object[] { enc, onlyPrimary});
+        for (boolean enc : encryptionParameters())
+            for (boolean onlyPrimary : new boolean[] {true, false})
+                res.add(new Object[] {enc, onlyPrimary});
 
         return res;
+    }
+
+    /** */
+    protected static Collection<Boolean> encryptionParameters() {
+        return DISK_PAGE_COMPRESSION != DiskPageCompression.DISABLED
+            ? F.asList(false)
+            : F.asList(false, true);
     }
 
     /** {@inheritDoc} */
@@ -311,7 +314,7 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
 
             assertTrue("The process has not finished on the node " + kctx.localNodeId(), success);
 
-            File dir = kctx.pdsFolderResolver().fileTree().cacheStorage(ccfg);
+            File dir = kctx.pdsFolderResolver().fileTree().defaultCacheStorage(ccfg);
 
             String errMsg = String.format("%s, dir=%s, exists=%b, files=%s",
                 ignite.name(), dir, dir.exists(), Arrays.toString(dir.list()));
@@ -335,27 +338,29 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
     /**
      * Calculate CRC for all partition files of specified cache.
      *
-     * @param cacheDir Cache directory to iterate over partition files.
+     * @param cacheDirs Cache directories to iterate over partition files.
      * @return The map of [fileName, checksum].
      */
-    public static Map<String, Integer> calculateCRC32Partitions(File cacheDir) {
-        assert cacheDir.isDirectory() : cacheDir.getAbsolutePath();
-
+    public static Map<String, Integer> calculateCRC32Partitions(File... cacheDirs) {
         Map<String, Integer> result = new HashMap<>();
 
-        try {
-            try (DirectoryStream<Path> partFiles = newDirectoryStream(cacheDir.toPath(),
-                p -> NodeFileTree.partitionFile(p.toFile()) && NodeFileTree.binFile(p.toFile()))
-            ) {
-                for (Path path : partFiles)
-                    result.put(path.toFile().getName(), FastCrc.calcCrc(path.toFile()));
-            }
+        for (File cacheDir : cacheDirs) {
+            assert cacheDir.isDirectory() : cacheDir.getAbsolutePath();
 
-            return result;
+            try {
+                try (DirectoryStream<Path> partFiles = newDirectoryStream(cacheDir.toPath(),
+                    p -> NodeFileTree.partitionFile(p.toFile()) && NodeFileTree.binFile(p.toFile()))
+                ) {
+                    for (Path path : partFiles)
+                        result.put(path.toFile().getName(), FastCrc.calcCrc(path.toFile()));
+                }
+            }
+            catch (IOException e) {
+                throw new IgniteException(e);
+            }
         }
-        catch (IOException e) {
-            throw new IgniteException(e);
-        }
+
+        return result;
     }
 
     /**
@@ -790,7 +795,7 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
         List<BlockingExecutor> execs = setBlockingSnapshotExecutor(srvs);
 
         IgniteFuture<Void> fut = snp(startCli).createSnapshot(SNAPSHOT_NAME, null, null, false,
-            false, dump, false, false);
+            false, dump, false, false, false, false);
 
         for (BlockingExecutor exec : execs)
             exec.waitForBlocked(30_000L);
@@ -825,6 +830,7 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
             null,
             parts,
             withMetaStorage,
+            false,
             false,
             false,
             false,
@@ -907,24 +913,22 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
     /** */
     protected static class BlockingCustomMessageDiscoverySpi extends TcpDiscoverySpi {
         /** List of messages which have been blocked. */
-        private final List<DiscoverySpiCustomMessage> blocked = new CopyOnWriteArrayList<>();
+        private final List<DiscoveryCustomMessage> blocked = new CopyOnWriteArrayList<>();
 
         /** Discovery custom message filter. */
         private volatile IgnitePredicate<DiscoveryCustomMessage> blockPred;
 
         /** {@inheritDoc} */
         @Override public void sendCustomEvent(DiscoverySpiCustomMessage msg) throws IgniteException {
-            if (msg instanceof CustomMessageWrapper) {
-                DiscoveryCustomMessage msg0 = ((CustomMessageWrapper)msg).delegate();
+            DiscoveryCustomMessage msg0 = U.unwrapCustomMessage(msg);
 
-                if (blockPred != null && blockPred.apply(msg0)) {
-                    blocked.add(msg);
+            if (blockPred != null && blockPred.apply(msg0)) {
+                blocked.add((DiscoveryCustomMessage)msg);
 
-                    if (log.isInfoEnabled())
-                        log.info("Discovery message has been blocked: " + msg0);
+                if (log.isInfoEnabled())
+                    log.info("Discovery message has been blocked: " + msg0);
 
-                    return;
-                }
+                return;
             }
 
             super.sendCustomEvent(msg);
@@ -935,14 +939,28 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
             blockPred = pred;
         }
 
-        /** Unblock and send previously saved discovery custom messages */
+        /** Reassigns blocking predicate and releases current blocked queue. */
+        public synchronized void blockNextAndRelease(IgnitePredicate<DiscoveryCustomMessage> pred) {
+            blockPred = pred;
+
+            releaseBlocked();
+        }
+
+        /** Unblock and send previously saved discovery custom messages. */
         public synchronized void unblock() {
             blockPred = null;
 
-            for (DiscoverySpiCustomMessage msg : blocked)
-                sendCustomEvent(msg);
+            releaseBlocked();
+        }
 
-            blocked.clear();
+        /** Releases the blocked messages. */
+        private void releaseBlocked() {
+            List<DiscoveryCustomMessage> blocked = new CopyOnWriteArrayList<>(this.blocked);
+
+            this.blocked.clear();
+
+            for (DiscoveryCustomMessage msg : blocked)
+                sendCustomEvent(msg);
         }
 
         /**
@@ -951,6 +969,14 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
          */
         public void waitBlocked(long timeout) throws IgniteInterruptedCheckedException {
             GridTestUtils.waitForCondition(() -> !blocked.isEmpty(), timeout);
+        }
+
+        /**
+         * @param timeout Timeout to wait blocking messages.
+         * @throws IgniteInterruptedCheckedException If interrupted.
+         */
+        public void waitBlockedSize(int size, long timeout) throws IgniteInterruptedCheckedException {
+            GridTestUtils.waitForCondition(() -> blocked.size() == size, timeout);
         }
     }
 
@@ -1007,8 +1033,8 @@ public abstract class AbstractSnapshotSelfTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public void sendPart0(File from, File to, @Nullable String drName, GroupPartitionId pair, Long length) {
-            delegate.sendPart(from, to, drName, pair, length);
+        @Override public void sendPart0(File from, File to, @Nullable String storagePath, GroupPartitionId pair, Long length) {
+            delegate.sendPart(from, to, storagePath, pair, length);
         }
 
         /** {@inheritDoc} */

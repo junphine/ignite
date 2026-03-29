@@ -17,31 +17,25 @@
 
 package org.apache.ignite.internal.processors.cache.query.continuous;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.ignite.internal.GridDirectMap;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Batch acknowledgement.
  */
 public class CacheContinuousQueryBatchAck extends GridCacheIdMessage {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Routine ID. */
-    private UUID routineId;
+    @Order(0)
+    UUID routineId;
 
     /** Update counters. */
+    @Order(1)
     @GridToStringInclude
-    @GridDirectMap(keyType = Integer.class, valueType = Long.class)
-    private Map<Integer, Long> updateCntrs;
+    Map<Integer, Long> updateCntrs;
 
     /**
      * Default constructor.
@@ -64,79 +58,13 @@ public class CacheContinuousQueryBatchAck extends GridCacheIdMessage {
     /**
      * @return Routine ID.
      */
-    UUID routineId() {
+    public UUID routineId() {
         return routineId;
     }
 
-    /**
-     * @return Update counters.
-     */
-    Map<Integer, Long> updateCntrs() {
+    /** @return Update counters. */
+    public Map<Integer, Long> updateCounters() {
         return updateCntrs;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 4:
-                if (!writer.writeUuid("routineId", routineId))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeMap("updateCntrs", updateCntrs, MessageCollectionItemType.INT, MessageCollectionItemType.LONG))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 4:
-                routineId = reader.readUuid("routineId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                updateCntrs = reader.readMap("updateCntrs", MessageCollectionItemType.INT, MessageCollectionItemType.LONG, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(CacheContinuousQueryBatchAck.class);
     }
 
     /** {@inheritDoc} */
@@ -147,11 +75,6 @@ public class CacheContinuousQueryBatchAck extends GridCacheIdMessage {
     /** {@inheritDoc} */
     @Override public short directType() {
         return 118;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 6;
     }
 
     /** {@inheritDoc} */

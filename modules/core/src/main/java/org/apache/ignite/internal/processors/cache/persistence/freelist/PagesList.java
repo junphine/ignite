@@ -154,7 +154,8 @@ public abstract class PagesList extends DataStructure {
 
             long tailId = io.getNextId(pageAddr);
 
-            assert tailId != 0;
+            if (tailId == 0)
+                throw corruptedFreeListException("nextId is 0 in non-tail page [pageId=" + U.hexLong(pageId) + "]", pageId);
 
             io.setNextId(pageAddr, 0L);
 
@@ -282,7 +283,7 @@ public abstract class PagesList extends DataStructure {
                     Stripe[] old = getBucket(bucket);
                     assert old == null;
 
-                    long[] upd = e.getValue().array();
+                    long[] upd = e.getValue().arrayCopy();
 
                     Stripe[] tails = new Stripe[upd.length];
 

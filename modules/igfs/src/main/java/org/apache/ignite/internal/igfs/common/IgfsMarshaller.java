@@ -17,22 +17,18 @@
 
 package org.apache.ignite.internal.igfs.common;
 
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-import java.util.Arrays;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.internal.processors.igfs.IgfsUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.igfs.common.IgfsIpcCommand.AFFINITY;
-import static org.apache.ignite.internal.igfs.common.IgfsIpcCommand.OPEN_CREATE;
-import static org.apache.ignite.internal.igfs.common.IgfsIpcCommand.OPEN_READ;
-import static org.apache.ignite.internal.igfs.common.IgfsIpcCommand.READ_BLOCK;
-import static org.apache.ignite.internal.igfs.common.IgfsIpcCommand.SET_TIMES;
-import static org.apache.ignite.internal.igfs.common.IgfsIpcCommand.WRITE_BLOCK;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.Arrays;
+
+import static org.apache.ignite.internal.igfs.common.IgfsIpcCommand.*;
 
 /**
  * Implementation of IGFS client message marshaller.

@@ -17,33 +17,31 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 
-import java.nio.ByteBuffer;
 import java.util.List;
-import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Range of rows.
  */
 public class GridH2RowRange implements Message {
     /** */
-    private static int FLAG_PARTIAL = 1;
+    private static final int FLAG_PARTIAL = 1;
 
     /** */
-    private int rangeId;
+    @Order(0)
+    int rangeId;
 
     /** */
-    @GridDirectCollection(Message.class)
     @GridToStringInclude
-    private List<GridH2RowMessage> rows;
+    @Order(1)
+    List<GridH2RowMessage> rows;
 
     /** */
-    private byte flags;
+    @Order(2)
+    byte flags;
 
     /**
      * @param rangeId Range ID.
@@ -88,90 +86,8 @@ public class GridH2RowRange implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeByte("flags", flags))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeInt("rangeId", rangeId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeCollection("rows", rows, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                flags = reader.readByte("flags");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                rangeId = reader.readInt("rangeId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                rows = reader.readCollection("rows", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridH2RowRange.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return -34;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /**

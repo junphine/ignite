@@ -17,14 +17,8 @@
 
 package org.apache.ignite.internal.processors.igfs.client;
 
-import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.binary.BinaryRawWriter;
-import org.apache.ignite.binary.BinaryReader;
-import org.apache.ignite.binary.BinaryWriter;
-import org.apache.ignite.binary.Binarylizable;
+import org.apache.ignite.binary.*;
 import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.igfs.IgfsUserContext;
 import org.apache.ignite.internal.processors.igfs.IgfsContext;
@@ -33,6 +27,8 @@ import org.apache.ignite.internal.processors.igfs.IgfsUtils;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.concurrent.Callable;
 
 /**
  * Abstract callable for IGFS tasks initiated on client node and passed to data node.

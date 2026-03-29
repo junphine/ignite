@@ -44,7 +44,7 @@ public class MinusNode<Row> extends AbstractSetOpNode<Row> {
         @Override protected void addOnSingle(Row row, int setIdx) {
             int[] cntrs;
 
-            GroupKey key = key(row);
+            GroupKey<Row> key = key(row);
 
             if (setIdx == 0) {
                 // Value in the map will always have 2 elements, first - count of keys in the first set,
@@ -78,7 +78,7 @@ public class MinusNode<Row> extends AbstractSetOpNode<Row> {
 
         /** {@inheritDoc} */
         @Override protected boolean affectResult(int[] cntrs) {
-            return cntrs[0] != cntrs[1];
+            return !all || cntrs[0] != cntrs[1];
         }
 
         /** {@inheritDoc} */

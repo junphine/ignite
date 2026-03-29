@@ -17,9 +17,9 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
+
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
@@ -27,6 +27,9 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.Externalizable;
+import java.nio.ByteBuffer;
 
 /**
  * Block write request acknowledgement message.
@@ -36,17 +39,20 @@ public class IgfsAckMessage extends IgfsCommunicationMessage {
     private static final long serialVersionUID = 0L;
 
     /** File id. */
-    private IgniteUuid fileId;
+    @Order(0)
+    IgniteUuid fileId;
 
     /** Request ID to ack. */
-    private long id;
+    @Order(1)
+    long id;
 
     /** Write exception. */
     @GridDirectTransient
     private IgniteCheckedException err;
 
     /** */
-    private byte[] errBytes;
+    @Order(2)
+    byte[] errBytes;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -87,10 +93,7 @@ public class IgfsAckMessage extends IgfsCommunicationMessage {
         return err;
     }
 
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
+
 
     /** {@inheritDoc} */
     @Override public void prepareMarshal(Marshaller marsh) throws IgniteCheckedException {
@@ -107,92 +110,9 @@ public class IgfsAckMessage extends IgfsCommunicationMessage {
         if (errBytes != null && err == null)
             err = U.unmarshal(marsh, errBytes, ldr);
     }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeByteArray("errBytes", errBytes))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeIgniteUuid("fileId", fileId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeLong("id", id))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                errBytes = reader.readByteArray("errBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                fileId = reader.readIgniteUuid("fileId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                id = reader.readLong("id");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(IgfsAckMessage.class);
-    }
-
     /** {@inheritDoc} */
     @Override public short directType() {
         return 64;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
-    }
 }

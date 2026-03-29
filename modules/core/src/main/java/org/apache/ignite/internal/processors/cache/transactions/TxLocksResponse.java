@@ -17,70 +17,57 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.cache.GridCacheMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Transactions lock list response.
  */
 public class TxLocksResponse extends GridCacheMessage {
-    /** Serial version UID. */
-    private static final long serialVersionUID = 0L;
-
     /** Future ID. */
-    private long futId;
+    @Order(0)
+    long futId;
 
     /** Locks for near txKeys of near transactions. */
     @GridToStringInclude
-    @GridDirectTransient
-    private final Map<IgniteTxKey, TxLockList> nearTxKeyLocks = new HashMap<>();
+    private final Map<IgniteTxKey, List<TxLock>> nearTxKeyLocks = new HashMap<>();
 
     /** Remote keys involved into transactions. Doesn't include near keys. */
     @GridToStringInclude
-    @GridDirectTransient
     private Set<IgniteTxKey> txKeys;
 
     /** Array of txKeys from {@link #nearTxKeyLocks}. Used during marshalling and unmarshalling. */
     @GridToStringExclude
-    private IgniteTxKey[] nearTxKeysArr;
+    @Order(1)
+    IgniteTxKey[] nearTxKeysArr;
 
     /** Array of txKeys from {@link #txKeys}. Used during marshalling and unmarshalling. */
     @GridToStringExclude
-    private IgniteTxKey[] txKeysArr;
+    @Order(2)
+    IgniteTxKey[] txKeysArr;
 
     /** Array of locksArr from {@link #nearTxKeyLocks}. Used during marshalling and unmarshalling. */
     @GridToStringExclude
-    private TxLockList[] locksArr;
+    @Order(3)
+    List<TxLock>[] locksArr;
 
     /**
      * Default constructor.
      */
     public TxLocksResponse() {
         // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public int handlerId() {
-        return 0;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean cacheGroupMessage() {
-        return false;
     }
 
     /**
@@ -100,7 +87,7 @@ public class TxLocksResponse extends GridCacheMessage {
     /**
      * @return Lock lists for all tx nearTxKeysArr.
      */
-    public Map<IgniteTxKey, TxLockList> txLocks() {
+    public Map<IgniteTxKey, List<TxLock>> txLocks() {
         return nearTxKeyLocks;
     }
 
@@ -108,7 +95,7 @@ public class TxLocksResponse extends GridCacheMessage {
      * @param txKey Tx key.
      * @return Lock list for given tx key.
      */
-    public TxLockList txLocks(IgniteTxKey txKey) {
+    public List<TxLock> txLocks(IgniteTxKey txKey) {
         return nearTxKeyLocks.get(txKey);
     }
 
@@ -117,10 +104,7 @@ public class TxLocksResponse extends GridCacheMessage {
      * @param txLock Tx lock.
      */
     public void addTxLock(IgniteTxKey txKey, TxLock txLock) {
-        TxLockList lockList = nearTxKeyLocks.get(txKey);
-
-        if (lockList == null)
-            nearTxKeyLocks.put(txKey, lockList = new TxLockList());
+        List<TxLock> lockList = nearTxKeyLocks.computeIfAbsent(txKey, k -> new ArrayList<>());
 
         lockList.add(txLock);
     }
@@ -160,11 +144,11 @@ public class TxLocksResponse extends GridCacheMessage {
             int len = nearTxKeyLocks.size();
 
             nearTxKeysArr = new IgniteTxKey[len];
-            locksArr = new TxLockList[len];
+            locksArr = (List<TxLock>[])new List[len];
 
             int i = 0;
 
-            for (Map.Entry<IgniteTxKey, TxLockList> entry : nearTxKeyLocks.entrySet()) {
+            for (Map.Entry<IgniteTxKey, List<TxLock>> entry : nearTxKeyLocks.entrySet()) {
                 IgniteTxKey key = entry.getKey();
 
                 key.prepareMarshal(ctx.cacheContext(key.cacheId()));
@@ -225,104 +209,7 @@ public class TxLocksResponse extends GridCacheMessage {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 3:
-                if (!writer.writeLong("futId", futId))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeObjectArray("locksArr", locksArr, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeObjectArray("nearTxKeysArr", nearTxKeysArr, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeObjectArray("txKeysArr", txKeysArr, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 3:
-                futId = reader.readLong("futId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                locksArr = reader.readObjectArray("locksArr", MessageCollectionItemType.MSG, TxLockList.class);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                nearTxKeysArr = reader.readObjectArray("nearTxKeysArr", MessageCollectionItemType.MSG, IgniteTxKey.class);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 6:
-                txKeysArr = reader.readObjectArray("txKeysArr", MessageCollectionItemType.MSG, IgniteTxKey.class);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(TxLocksResponse.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return -23;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 7;
     }
 }

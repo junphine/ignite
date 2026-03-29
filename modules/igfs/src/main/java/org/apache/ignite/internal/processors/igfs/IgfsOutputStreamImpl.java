@@ -31,9 +31,8 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static org.apache.ignite.igfs.IgfsMode.DUAL_SYNC;
-import static org.apache.ignite.igfs.IgfsMode.PRIMARY;
-import static org.apache.ignite.igfs.IgfsMode.PROXY;
+import static org.apache.ignite.igfs.IgfsMode.*;
+import static org.apache.ignite.internal.util.GridUnsafe.arrayCopy;
 
 /**
  * Output stream to store data into grid cache with separate blocks.
@@ -284,7 +283,7 @@ class IgfsOutputStreamImpl extends IgfsAbstractOutputStream {
 
                     byte[] allocated = new byte[blockSize];
 
-                    U.arrayCopy(remainder, 0, allocated, 0, remainder.length);
+                    arrayCopy(remainder, 0, allocated, 0, remainder.length);
 
                     remainder = allocated;
                 }

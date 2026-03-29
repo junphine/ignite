@@ -20,6 +20,7 @@ package org.apache.ignite.internal.processors.cache.persistence.snapshot.dump;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
@@ -80,6 +81,7 @@ import org.apache.ignite.internal.processors.cache.dr.GridCacheDrInfo;
 import org.apache.ignite.internal.processors.cache.persistence.filename.NodeFileTree;
 import org.apache.ignite.internal.processors.cache.persistence.filename.SnapshotFileTree;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteSnapshotManager;
+import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotPartitionsVerifyResult;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.dump.AbstractCacheDumpTest.TestDumpConsumer;
 import org.apache.ignite.internal.processors.cache.version.CacheVersionConflictResolver;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -119,6 +121,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.snapshot.A
 import static org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteSnapshotManager.SNAPSHOT_TRANSFER_RATE_DMS_KEY;
 import static org.apache.ignite.internal.processors.cache.persistence.snapshot.dump.AbstractCacheDumpTest.CACHE_0;
 import static org.apache.ignite.internal.processors.cache.persistence.snapshot.dump.AbstractCacheDumpTest.DMP_NAME;
+import static org.apache.ignite.internal.processors.cache.persistence.snapshot.dump.AbstractCacheDumpTest.GRP;
 import static org.apache.ignite.internal.processors.cache.persistence.snapshot.dump.AbstractCacheDumpTest.KEYS_CNT;
 import static org.apache.ignite.internal.processors.cache.persistence.snapshot.dump.AbstractCacheDumpTest.USER_FACTORY;
 import static org.apache.ignite.internal.processors.cache.persistence.snapshot.dump.AbstractCacheDumpTest.dump;
@@ -146,7 +149,8 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName)
+            .setConsistentId(igniteInstanceName);
 
         if (lsnr != null) {
             ListeningTestLogger testLog = new ListeningTestLogger(log);
@@ -161,10 +165,11 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
         if (persistence)
             cfg.getDataStorageConfiguration().setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true));
 
-        cfg.getDataStorageConfiguration().setDataRegionConfigurations(new DataRegionConfiguration()
+        cfg.getDataStorageConfiguration()
+            .setExtraStoragePaths(CUSTOM_LOCATION)
+            .setDataRegionConfigurations(new DataRegionConfiguration()
             .setPersistenceEnabled(persistence)
-            .setName(CUSTOM_LOCATION)
-            .setStoragePath(CUSTOM_LOCATION));
+            .setName(CUSTOM_LOCATION));
 
         cfg.setIncludeEventTypes(EVTS_CLUSTER_SNAPSHOT);
 
@@ -215,12 +220,123 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
     }
 
     /** */
+    @Test
+    public void testCheckDumpFromOtherNode_singleNode() throws Exception {
+        doTestCheckDumpFromOtherNode(1, 0);
+    }
+
+    /** */
+    @Test
+    public void testCheckDumpFromOtherNode_multiNode() throws Exception {
+        doTestCheckDumpFromOtherNode(3, 0);
+    }
+
+    /** */
+    @Test
+    public void testCheckDumpFromOtherNode_singleNode_errorNoFile() throws Exception {
+        doTestCheckDumpFromOtherNode(1, 1);
+    }
+
+    /** */
+    @Test
+    public void testCheckDumpFromOtherNode_multiNode_errorNoFile() throws Exception {
+        doTestCheckDumpFromOtherNode(3, 1);
+    }
+
+    /** */
+    @Test
+    public void testCheckDumpFromOtherNode_singleNode_errorWrongHash() throws Exception {
+        doTestCheckDumpFromOtherNode(1, 2);
+    }
+
+    /** */
+    @Test
+    public void testCheckDumpFromOtherNode_multiNode_errorWrongHash() throws Exception {
+        doTestCheckDumpFromOtherNode(3, 2);
+    }
+
+    /** */
+    private void doTestCheckDumpFromOtherNode(int nodes, int errorType) throws Exception {
+        IgniteEx ign = startGrids(nodes);
+
+        CacheConfiguration<Object, Object> ccfg = defaultCacheConfiguration()
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(20))
+            .setBackups(nodes - 1);
+
+        ign.createCache(ccfg);
+
+        for (int i = 0; i < KEYS_CNT; ++i)
+            ign.cache(DEFAULT_CACHE_NAME).put(i, USER_FACTORY.apply(i));
+
+        SnapshotFileTree sft = snapshotFileTree(grid(nodes - 1), DMP_NAME);
+
+        ign.snapshot().createDump(DMP_NAME, null).get(getTestTimeout());
+
+        stopAllGrids();
+
+        cleanPersistenceDir(true);
+
+        if (errorType == 1) {
+            File part = sft.dumpPartition(ccfg, 13, false);
+
+            assertTrue(part.exists());
+            assertTrue(part.delete());
+        }
+        else if (errorType == 2) {
+            File part = sft.dumpPartition(ccfg, 13, false);
+
+            assertTrue(part.exists());
+            assertTrue(part.length() > HEADER_SZ);
+
+            try (RandomAccessFile raf = new RandomAccessFile(part, "rw")) {
+                raf.seek(HEADER_SZ);
+
+                byte first = raf.readByte();
+
+                raf.seek(HEADER_SZ);
+
+                raf.write(first - 1);
+            }
+        }
+
+        ign = startGrid(nodes + 1);
+
+        SnapshotPartitionsVerifyResult res =
+            ign.context().cache().context().snapshotMgr().checkSnapshot(DMP_NAME, null).get(getTestTimeout());
+
+        if (errorType == 0) {
+            assertTrue(F.isEmpty(res.exceptions()));
+        }
+        else if (errorType == 1) {
+            Exception err = res.exceptions().get(ign.localNode());
+
+            assertNotNull(err);
+            assertTrue(err.getMessage().contains("Snapshot data doesn't contain required cache group partition"));
+        }
+        else if (errorType == 2) {
+            Exception err = res.exceptions().get(ign.localNode());
+
+            assertNotNull(err);
+            assertTrue(err.getCause().getCause().getMessage().contains("Data corrupted"));
+
+        }
+        else
+            fail("Unknown errorType: " + errorType);
+
+    }
+
+    /** */
     private void doTestDumpRawData(boolean dataCustomLocation, boolean dumpAbsPath) throws Exception {
         IgniteEx ign = startGrids(3);
 
         IgniteEx cli = startClientGrid(G.allGrids().size());
 
-        cli.createCache(defaultCacheConfiguration().setDataRegionName(dataCustomLocation ? CUSTOM_LOCATION : null));
+        CacheConfiguration<Object, Object> ccfg = defaultCacheConfiguration();
+
+        if (dataCustomLocation)
+            ccfg.setStoragePaths(CUSTOM_LOCATION);
+
+        cli.createCache(ccfg);
 
         for (int i = 0; i < KEYS_CNT; ++i)
             cli.cache(DEFAULT_CACHE_NAME).put(i, USER_FACTORY.apply(i));
@@ -237,6 +353,8 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
                 false,
                 false,
                 true,
+                false,
+                false,
                 false,
                 false
             ).get();
@@ -303,6 +421,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
                         keepBinary.get(),
                         keepRaw.get(),
                         null,
+                        null,
                         false,
                         null
                     ),
@@ -346,7 +465,12 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
 
         ign0.cluster().state(ClusterState.ACTIVE);
 
-        ign0.createCache(defaultCacheConfiguration().setDataRegionName(dataCustomLocation ? CUSTOM_LOCATION : null));
+        CacheConfiguration<Object, Object> ccfg = defaultCacheConfiguration();
+
+        if (dataCustomLocation)
+            ccfg.setStoragePaths(CUSTOM_LOCATION);
+
+        ign0.createCache(ccfg);
 
         try (IgniteDataStreamer<Integer, String> ds = ign0.dataStreamer(DEFAULT_CACHE_NAME)) {
             IgniteCache<Integer, String> cache = ign0.cache(DEFAULT_CACHE_NAME);
@@ -409,7 +533,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
     /** */
     @Test
     public void testSnapshotDirectoryCreatedLazily() throws Exception {
-        try (IgniteEx ign = startGrid(new IgniteConfiguration())) {
+        try (IgniteEx ign = startGrid()) {
             NodeFileTree ft = ign.context().pdsFolderResolver().fileTree();
 
             assertFalse(ft.snapshotsRoot() + " must created lazily for in-memory node", ft.snapshotsRoot().exists());
@@ -422,7 +546,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
     /** */
     @Test
     public void testDumpFailIfNoCaches() throws Exception {
-        try (IgniteEx ign = startGrid(new IgniteConfiguration())) {
+        try (IgniteEx ign = startGrid()) {
             ign.cluster().state(ClusterState.ACTIVE);
 
             assertThrows(
@@ -473,7 +597,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
     /** */
     @Test
     public void testDumpIteratorFaileOnWrongCrc() throws Exception {
-        try (IgniteEx ign = startGrid(new IgniteConfiguration())) {
+        try (IgniteEx ign = startGrid()) {
             ign.cluster().state(ClusterState.ACTIVE);
 
             IgniteCache<Integer, Integer> cache = ign.createCache(DEFAULT_CACHE_NAME);
@@ -492,7 +616,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
 
             NodeFileTree sft = sfts.get(0);
 
-            File cacheDumpDir = sft.cacheStorage(cache.getConfiguration(CacheConfiguration.class));
+            File cacheDumpDir = sft.defaultCacheStorage(cache.getConfiguration(CacheConfiguration.class));
 
             assertTrue(cacheDumpDir.exists());
 
@@ -539,7 +663,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
 
             assertThrows(
                 null,
-                () -> dump.iterator(sfts.get(0).folderName(), CU.cacheId(DEFAULT_CACHE_NAME), 0).next(),
+                () -> dump.iterator(sfts.get(0).folderName(), CU.cacheId(DEFAULT_CACHE_NAME), 0, null).next(),
                 IgniteException.class,
                 "Data corrupted"
             );
@@ -687,11 +811,15 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
     /** */
     private void doTestCustomLocation(boolean dataCustomLocation) throws Exception {
         try (IgniteEx ign = startGrid()) {
-            IgniteCache<Integer, Integer> cache = ign.createCache(new CacheConfiguration<Integer, Integer>()
+            CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<Integer, Integer>()
                 .setName("test-cache-0")
                 .setBackups(1)
-                .setAtomicityMode(CacheAtomicityMode.ATOMIC)
-                .setDataRegionName(dataCustomLocation ? CUSTOM_LOCATION : null));
+                .setAtomicityMode(CacheAtomicityMode.ATOMIC);
+
+            if (dataCustomLocation)
+                ccfg.setStoragePaths(CUSTOM_LOCATION);
+
+            IgniteCache<Integer, Integer> cache = ign.createCache(ccfg);
 
             IntStream.range(0, KEYS_CNT).forEach(i -> cache.put(i, i));
 
@@ -706,6 +834,8 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
                 false,
                 false,
                 true,
+                false,
+                false,
                 false,
                 false
             ).get();
@@ -797,10 +927,10 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
         String zipDump = "zipDump";
 
         ign.context().cache().context().snapshotMgr()
-            .createSnapshot(rawDump, null, null, false, true, true, false, false).get();
+            .createSnapshot(rawDump, null, null, false, true, true, false, false, false, false).get();
 
         ign.context().cache().context().snapshotMgr()
-            .createSnapshot(zipDump, null, null, false, true, true, true, false).get();
+            .createSnapshot(zipDump, null, null, false, true, true, true, false, false, false).get();
 
         assertEquals("The check procedure has finished, no conflicts have been found.\n\n", invokeCheckCommand(ign, rawDump));
 
@@ -812,13 +942,15 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
         SnapshotFileTree zipFt = snapshotFileTree(ign, zipDump);
 
         Map<Integer, Long> rawSizes = Arrays
-            .stream(rawFt.cacheStorage(ccfg).listFiles())
+            .stream(rawFt.cacheStorages(ccfg))
+            .flatMap(cs -> Arrays.stream(cs.listFiles()))
             .filter(f -> !NodeFileTree.cacheConfigFile(f))
             .peek(f -> assertTrue(SnapshotFileTree.dumpPartitionFile(f, false)))
             .collect(Collectors.toMap(NodeFileTree::partId, File::length));
 
         Map<Integer, Long> zipSizes = Arrays
-            .stream(zipFt.cacheStorage(ccfg).listFiles())
+            .stream(zipFt.cacheStorages(ccfg))
+            .flatMap(cs -> Arrays.stream(cs.listFiles()))
             .filter(f -> !NodeFileTree.cacheConfigFile(f))
             .peek(f -> assertTrue(SnapshotFileTree.dumpPartitionFile(f, true)))
             .collect(Collectors.toMap(NodeFileTree::partId, File::length));
@@ -939,6 +1071,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
                 false,
                 false,
                 null,
+                null,
                 false,
                 null
             ),
@@ -953,7 +1086,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
     public void testCreateEncryptedFail() throws Exception {
         BiConsumer<IgniteEx, String> check = (ign, msg) -> assertThrows(null, () -> {
             ign.context().cache().context().snapshotMgr()
-                .createSnapshot(DMP_NAME, null, null, false, false, true, false, true).get(getTestTimeout());
+                .createSnapshot(DMP_NAME, null, null, false, false, true, false, true, false, false).get(getTestTimeout());
         }, IgniteException.class, msg);
 
         try (IgniteEx srv = startGrid()) {
@@ -972,7 +1105,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
     public void testReadEncrypted() throws Exception {
         File dumpDir;
 
-        try (IgniteEx srv = startGrid(new IgniteConfiguration().setEncryptionSpi(encryptionSpi()))) {
+        try (IgniteEx srv = startGrid(getConfiguration().setEncryptionSpi(encryptionSpi()))) {
             IgniteCache<Integer, byte[]> cache = srv.createCache(DEFAULT_CACHE_NAME);
             IntStream.range(0, KEYS_CNT).forEach(i -> {
                 byte[] data = new byte[Math.max(Integer.BYTES, ThreadLocalRandom.current().nextInt((int)U.KB))];
@@ -983,7 +1116,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
             });
 
             srv.context().cache().context().snapshotMgr()
-                .createSnapshot(DMP_NAME, null, null, false, false, true, false, true).get(getTestTimeout());
+                .createSnapshot(DMP_NAME, null, null, false, false, true, false, true, false, false).get(getTestTimeout());
 
             dumpDir = snapshotFileTree(srv, DMP_NAME).root();
         }
@@ -1005,6 +1138,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
                 true,
                 false,
                 false,
+                null,
                 null,
                 false,
                 null
@@ -1036,6 +1170,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
                         true,
                         false,
                         false,
+                        null,
                         null,
                         false,
                         encSpi
@@ -1072,6 +1207,7 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
                 true,
                 false,
                 false,
+                null,
                 null,
                 false,
                 encryptionSpi()
@@ -1125,6 +1261,228 @@ public class IgniteCacheDumpSelf2Test extends GridCommonAbstractTest {
             assertTrue("Expected sorted values: " + processedVals,
                 F.isSorted(processedVals.stream().mapToLong(v -> v).toArray()));
         }
+    }
+
+    /** */
+    @Test
+    public void testConfigOnlySnapshotThrows() throws Exception {
+        try (IgniteEx ign = startGrid(0)) {
+            ign.cluster().state(ClusterState.ACTIVE);
+
+            IgniteCache<Integer, Integer> c = ign.createCache(DEFAULT_CACHE_NAME);
+
+            IntStream.range(0, 10).forEach(i -> c.put(i, i));
+
+            IgniteSnapshotManager snpMgr = ign.context().cache().context().snapshotMgr();
+
+            assertThrows(
+                null,
+                () -> {
+                    snpMgr.createSnapshot(
+                        DMP_NAME,
+                        null,
+                        null,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        true
+                    );
+                },
+                IgniteException.class,
+                "Config only supported only for dump"
+            );
+        }
+    }
+
+    /** */
+    @Test
+    public void testDumpReaderDebugLogsGroupName() throws Exception {
+        checkDumpReaderDebugLogsGroupName(GRP, GRP, new String[]{GRP});
+    }
+
+    /** */
+    @Test
+    public void testDumpReaderDebugLogsNullableGroupName() throws Exception {
+        checkDumpReaderDebugLogsGroupName(GRP, GRP, null);
+    }
+
+    /** */
+    @Test
+    public void testDumpReaderDebugLogsNoGroupName() throws Exception {
+        checkDumpReaderDebugLogsGroupName(null, CACHE_0, null);
+    }
+
+    /** */
+    @Test
+    public void testDumpReaderSkipCopiesLogsGroupName() throws Exception {
+        int parts = 4;
+        String dumpName0 = "dump0";
+        String dumpName1 = "dump1";
+
+        File snapshotPath0 = Files.createTempDirectory("snapshots0").toFile();
+        File snapshotPath1 = Files.createTempDirectory("snapshots1").toFile();
+        File combinedDumpDir = Files.createTempDirectory("combined_dump").toFile();
+
+        ListeningTestLogger testLog = new ListeningTestLogger(log);
+
+        LogListener skipLsnr = LogListener.matches("Skip copy partition")
+            .times(parts)
+            .andMatches("grp=" + GRP)
+            .build();
+
+        testLog.registerListener(skipLsnr);
+
+        try {
+            IgniteEx node0 = startGrid(getConfiguration("node0")
+                .setConsistentId("node0")
+                .setSnapshotPath(snapshotPath0.getAbsolutePath())
+                .setGridLogger(testLog));
+
+            IgniteEx node1 = startGrid(getConfiguration("node1")
+                .setConsistentId("node1")
+                .setSnapshotPath(snapshotPath1.getAbsolutePath())
+                .setGridLogger(testLog));
+
+            node0.cluster().state(ClusterState.ACTIVE);
+
+            CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<Integer, Integer>()
+                .setName(DEFAULT_CACHE_NAME)
+                .setGroupName(GRP)
+                .setBackups(1)
+                .setAffinity(new RendezvousAffinityFunction().setPartitions(parts));
+
+            IgniteCache<Integer, Integer> cache = node0.createCache(ccfg);
+
+            IntStream.range(0, KEYS_CNT).forEach(i -> cache.put(i, i));
+
+            node0.snapshot().createDump(dumpName0, null).get(getTestTimeout());
+
+            U.sleep(100);
+
+            node1.snapshot().createDump(dumpName1, null).get(getTestTimeout());
+
+            File dumpDir0 = new File(snapshotPath0, dumpName0);
+            File dumpDir1 = new File(snapshotPath1, dumpName1);
+
+            U.copy(dumpDir0, combinedDumpDir, true);
+            U.copy(dumpDir1, combinedDumpDir, true);
+
+            DumpConsumer dummyConsumer = new DumpConsumer() {
+                @Override public void start() {
+                    // No-op.
+                }
+
+                @Override public void onMappings(Iterator<TypeMapping> mappings) {
+                    // No-op.
+                }
+
+                @Override public void onTypes(Iterator<BinaryType> types) {
+                    // No-op.
+                }
+
+                @Override public void onCacheConfigs(Iterator<StoredCacheData> caches) {
+                    // No-op.
+                }
+
+                @Override public void onPartition(int grpId, int partId, Iterator<DumpEntry> data) {
+                    // No-op.
+                }
+
+                @Override public void stop() {
+                    // No-op.
+                }
+            };
+
+            new DumpReader(
+                new DumpReaderConfiguration(
+                    null,
+                    combinedDumpDir.getAbsolutePath(),
+                    null,
+                    dummyConsumer,
+                    DFLT_THREAD_CNT,
+                    DFLT_TIMEOUT,
+                    false,
+                    true,
+                    true,
+                    new String[]{GRP},
+                    null,
+                    true,
+                    null
+                ),
+                testLog
+            ).run();
+
+            assertTrue(skipLsnr.check());
+        }
+        finally {
+            U.delete(snapshotPath0);
+            U.delete(snapshotPath1);
+            U.delete(combinedDumpDir);
+        }
+    }
+
+    /** */
+    private void checkDumpReaderDebugLogsGroupName(
+        @Nullable String cacheGroupName,
+        String expectedLogGroup,
+        @Nullable String[] grpNames
+    ) throws Exception {
+        String id = "test";
+        setLoggerDebugLevel();
+        ListeningTestLogger testLog = new ListeningTestLogger(log);
+
+        LogListener errLsnr = LogListener.matches("Error consuming partition").andMatches("grp=" + expectedLogGroup).build();
+        LogListener cnsmLsnr = LogListener.matches("Consuming partition").andMatches("grp=" + expectedLogGroup).build();
+
+        testLog.registerListener(errLsnr);
+        testLog.registerListener(cnsmLsnr);
+
+        IgniteEx ign = startGrid(getConfiguration(id).setConsistentId(id).setGridLogger(testLog));
+        ign.cluster().state(ClusterState.ACTIVE);
+
+        CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<Integer, Integer>()
+            .setName(CACHE_0)
+            .setBackups(1)
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(3));
+
+        if (cacheGroupName != null)
+            ccfg.setGroupName(cacheGroupName);
+
+        IgniteCache<Integer, Integer> cache = ign.createCache(ccfg);
+        IntStream.range(0, KEYS_CNT).forEach(i -> cache.put(i, i));
+
+        ign.snapshot().createDump(DMP_NAME, null).get(getTestTimeout());
+
+        TestDumpConsumer cnsmr = new TestDumpConsumer() {
+            @Override public void onPartition(int grp, int part, Iterator<DumpEntry> data) {
+                throw new RuntimeException("trigger error log");
+            }
+        };
+
+        assertThrows(null, () -> new DumpReader(
+            new DumpReaderConfiguration(
+                DMP_NAME,
+                null,
+                ign.configuration(),
+                cnsmr,
+                DFLT_THREAD_CNT,
+                DFLT_TIMEOUT,
+                true,
+                true,
+                false,
+                grpNames,
+                null,
+                false,
+                null
+            ),
+            testLog
+        ).run(), RuntimeException.class, "trigger error log");
+
+        assertTrue("Log with group name not found", errLsnr.check());
+        assertTrue("Consuming with group name not found", cnsmLsnr.check());
     }
 
     /** */

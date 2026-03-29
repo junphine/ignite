@@ -16,12 +16,10 @@
  */
 package org.apache.ignite.internal.processors.cache.binary;
 
-import java.nio.ByteBuffer;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * As {@link DiscoveryCustomMessage} messages are delivered to client nodes asynchronously
@@ -34,10 +32,8 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
  */
 public class MetadataRequestMessage implements Message {
     /** */
-    private static final long serialVersionUID = 0L;
-
-    /** */
-    private int typeId;
+    @Order(0)
+    int typeId;
 
     /**
      * Default constructor.
@@ -54,65 +50,13 @@ public class MetadataRequestMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("typeId", typeId))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                typeId = reader.readInt("typeId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(MetadataRequestMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 80;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 1;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        //No-op.
-    }
-
-    /** */
+    /**
+     * @return Type ID.
+     */
     public int typeId() {
         return typeId;
     }

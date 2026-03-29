@@ -17,11 +17,6 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.FileSystemConfiguration;
 import org.apache.ignite.igfs.IgfsIpcEndpointConfiguration;
@@ -33,6 +28,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.thread.IgniteThread;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 
 import static org.apache.ignite.igfs.IgfsIpcEndpointType.TCP;
 
@@ -75,7 +76,7 @@ public class IgfsServerManager extends IgfsManager {
         }
 
         if (bindWorker != null)
-            new IgniteThread(bindWorker).start();
+            new IgniteThread(this.igfsCtx.kernalContext().igniteInstanceName(), "IgfsServerManager", bindWorker).start();
     }
 
     /**

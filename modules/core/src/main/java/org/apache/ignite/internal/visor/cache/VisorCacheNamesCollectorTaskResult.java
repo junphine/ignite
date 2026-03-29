@@ -23,6 +23,7 @@ import java.io.ObjectOutput;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -36,16 +37,20 @@ public class VisorCacheNamesCollectorTaskResult extends IgniteDataTransferObject
     private static final long serialVersionUID = 0L;
 
     /** Cache names and deployment IDs. */
-    private Map<String, IgniteUuid> caches;
+    @Order(0)
+    Map<String, IgniteUuid> caches;
     
     /** Cache names and Comments. */
-    private Map<String, String> cachesComment;
+    @Order(1)
+    Map<String, String> cachesComment;
     
     /** Cache sqlSchemas. */
-    private Map<String, String> sqlSchemas;
+    @Order(2)
+    Map<String, String> sqlSchemas;
     
     /** Cache tableNames. */
-    private Map<String, String> types;
+    @Order(3)
+    Map<String, String> types;
 
     /**
      * Default constructor.
@@ -94,7 +99,7 @@ public class VisorCacheNamesCollectorTaskResult extends IgniteDataTransferObject
 
 
     /** {@inheritDoc} */
-    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
         U.writeMap(out, caches);
         U.writeMap(out, cachesComment);
         U.writeMap(out, sqlSchemas);
@@ -102,7 +107,7 @@ public class VisorCacheNamesCollectorTaskResult extends IgniteDataTransferObject
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         caches = U.readMap(in);
         cachesComment = U.readMap(in);
         sqlSchemas = U.readMap(in);

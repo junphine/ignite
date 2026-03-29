@@ -100,7 +100,13 @@ class SystemViewFileWriter extends GridWorker {
             "metrics",
             "caches",
             "sql.queries",
-            "nodes");
+            "nodes",
+            "cacheGroupPageLists",
+            "dataRegionPageLists",
+            "partitionStates",
+            "statisticsPartitionData",
+            "metastorage",
+            "distributed.metastorage");
         sysViewPredicate = view -> !ignoredViews.contains(view.name());
 
         doWrite(buf -> {
@@ -123,7 +129,7 @@ class SystemViewFileWriter extends GridWorker {
                 catch (BufferOverflowException e) {
                     throw e;
                 }
-                catch (AssertionError /* TODO: IGNITE-25152 */ | RuntimeException e) {
+                catch (RuntimeException e) {
                     log.warning("Unable to write system view: " + view.name() + ".", e);
                 }
             }

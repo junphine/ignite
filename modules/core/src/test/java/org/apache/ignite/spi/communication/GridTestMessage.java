@@ -17,12 +17,11 @@
 
 package org.apache.ignite.spi.communication;
 
-import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.UUID;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
 
 /**
  * Test message for communication SPI tests.
@@ -32,16 +31,24 @@ public class GridTestMessage implements Message {
     public static final short DIRECT_TYPE = 200;
 
     /** */
-    private UUID srcNodeId;
+    public static final MessageFactoryProvider GRID_TEST_MESSAGE_FACTORY = f -> f.register(
+        GridTestMessage.DIRECT_TYPE, GridTestMessage::new, new GridTestMessageSerializer());
 
     /** */
-    private long msgId;
+    @Order(0)
+    UUID srcNodeId;
 
     /** */
-    private long resId;
+    @Order(1)
+    long msgId;
+
+    /** */
+    @Order(2)
+    long resId;
 
     /** Network payload */
-    private byte[] payload;
+    @Order(3)
+    byte[] payload;
 
     /** */
     public GridTestMessage() {
@@ -59,135 +66,24 @@ public class GridTestMessage implements Message {
         this.resId = resId;
     }
 
-    /**
-     * @return Id of message originator.
-     */
+    /** @return Id of message originator. */
     public UUID getSourceNodeId() {
         return srcNodeId;
     }
 
-    /**
-     * @return Message sequence id.
-     */
+    /** @return Message sequence id. */
     public long getMsgId() {
         return msgId;
     }
 
-    /**
-     * @return Response id.
-     */
-    public long getResponseId() {
-        return resId;
-    }
-
-    /**
-     * @param payload Payload to be set.
-     */
+    /** @param payload Payload to be set. */
     public void payload(byte[] payload) {
         this.payload = payload;
-    }
-
-    /**
-     * @return Network payload.
-     */
-    public byte[] payload() {
-        return payload;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeUuid(null, srcNodeId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeLong(null, msgId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeLong(null, resId))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeByteArray(null, payload))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        switch (reader.state()) {
-            case 0:
-                srcNodeId = reader.readUuid(null);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                msgId = reader.readLong(null);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                resId = reader.readLong(null);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                payload = reader.readByteArray(null);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-        }
-
-        return true;
     }
 
     /** {@inheritDoc} */
     @Override public short directType() {
         return DIRECT_TYPE;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 4;
     }
 
     /** {@inheritDoc} */

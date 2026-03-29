@@ -17,18 +17,19 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.util.HashSet;
-import java.util.Set;
 import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.processors.igfs.client.*;
-import org.apache.ignite.internal.processors.igfs.client.meta.*;
+import org.apache.ignite.internal.processors.igfs.client.meta.IgfsClientMetaIdsForPathCallable;
+import org.apache.ignite.internal.processors.igfs.client.meta.IgfsClientMetaInfoForPathCallable;
+import org.apache.ignite.internal.processors.igfs.client.meta.IgfsClientMetaUnlockCallable;
 import org.apache.ignite.internal.processors.igfs.data.IgfsDataPutProcessor;
 import org.apache.ignite.internal.processors.igfs.meta.*;
-
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Binary context.
@@ -37,7 +38,7 @@ public class IgfsMessageFactoryProvider implements MessageFactoryProvider {
    
 
     /** Set of system classes that should be marshalled with BinaryMarshaller. */
-    private static final Set<String> BINARYLIZABLE_SYS_CLSS = BinaryContext.BINARYLIZABLE_SYS_CLSS;;
+
 
     /* Binarylizable system classes set initialization. */
     static {
@@ -86,7 +87,7 @@ public class IgfsMessageFactoryProvider implements MessageFactoryProvider {
         sysClss.add(IgfsClientSummaryCallable.class.getName());
         sysClss.add(IgfsClientUpdateCallable.class.getName());
         
-        BINARYLIZABLE_SYS_CLSS.addAll(sysClss);
+        //BINARYLIZABLE_SYS_CLSS.addAll(sysClss);
         
     }
 

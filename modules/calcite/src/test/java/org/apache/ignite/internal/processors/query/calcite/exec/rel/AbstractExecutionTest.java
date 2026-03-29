@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -61,6 +62,7 @@ import org.apache.ignite.internal.processors.query.calcite.metadata.FragmentDesc
 import org.apache.ignite.internal.processors.query.calcite.prepare.BaseQueryContext;
 import org.apache.ignite.internal.processors.security.NoOpIgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.internal.thread.pool.IgniteStripedThreadPoolExecutor;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -84,6 +86,9 @@ public class AbstractExecutionTest extends GridCommonAbstractTest {
 
     /** Params string. */
     protected static final String PARAMS_STRING = "Task executor = {0}, Execution strategy = {1}";
+
+    /** */
+    protected static final int IN_BUFFER_SIZE = AbstractNode.IN_BUFFER_SIZE;
 
     /** */
     private Throwable lastE;
@@ -207,7 +212,15 @@ public class AbstractExecutionTest extends GridCommonAbstractTest {
                 taskExecutor = executor;
             }
             else {
-                taskExecutor = new QueryBlockingTaskExecutor(kernal);
+                taskExecutor = new QueryBlockingTaskExecutor(kernal) {
+                    @Override public void execute(UUID qryId, long fragmentId, Runnable qryTask) {
+                        super.execute(qryId, fragmentId, () -> {
+                            qryTask.run();
+
+                            LockSupport.parkNanos(ThreadLocalRandom.current().nextLong(1_000, 10_000));
+                        });
+                    }
+                };
 
                 taskExecutor.onStart(kernal);
             }
@@ -236,7 +249,7 @@ public class AbstractExecutionTest extends GridCommonAbstractTest {
     }
 
     /** Task reordering executor. */
-    private static class IgniteTestStripedThreadPoolExecutor extends org.apache.ignite.thread.IgniteStripedThreadPoolExecutor {
+    private static class IgniteTestStripedThreadPoolExecutor extends IgniteStripedThreadPoolExecutor {
         /** */
         final Deque<T2<Runnable, Integer>> tasks = new ArrayDeque<>();
 
@@ -326,6 +339,11 @@ public class AbstractExecutionTest extends GridCommonAbstractTest {
     }
 
     /** */
+    protected ExecutionContext<Object[]> executionContext() {
+        return executionContext(nodes.get(new Random().nextInt(nodesCnt)), UUID.randomUUID(), 0);
+    }
+
+    /** */
     protected ExecutionContext<Object[]> executionContext(UUID nodeId, UUID qryId, long fragmentId) {
         FragmentDescription fragmentDesc = new FragmentDescription(fragmentId, null, null, null);
         return new ExecutionContext<>(
@@ -396,13 +414,13 @@ public class AbstractExecutionTest extends GridCommonAbstractTest {
      */
     public static class TestTable implements Iterable<Object[]> {
         /** */
-        private int rowsCnt;
+        private final int rowsCnt;
 
         /** */
-        private RelDataType rowType;
+        private final int colsCnt;
 
         /** */
-        private Function<Integer, Object>[] fieldCreators;
+        private final Function<Integer, Object>[] fieldCreators;
 
         /** */
         TestTable(int rowsCnt, RelDataType rowType) {
@@ -430,7 +448,14 @@ public class AbstractExecutionTest extends GridCommonAbstractTest {
         /** */
         TestTable(int rowsCnt, RelDataType rowType, Function<Integer, Object>... fieldCreators) {
             this.rowsCnt = rowsCnt;
-            this.rowType = rowType;
+            colsCnt = rowType.getFieldCount();
+            this.fieldCreators = fieldCreators;
+        }
+
+        /** */
+        TestTable(int rowsCnt, int colsCnt, Function<Integer, Object>... fieldCreators) {
+            this.rowsCnt = rowsCnt;
+            this.colsCnt = colsCnt;
             this.fieldCreators = fieldCreators;
         }
 
@@ -451,7 +476,7 @@ public class AbstractExecutionTest extends GridCommonAbstractTest {
 
         /** */
         private Object[] createRow(int rowNum) {
-            Object[] row = new Object[rowType.getFieldCount()];
+            Object[] row = new Object[colsCnt];
 
             for (int i = 0; i < fieldCreators.length; ++i)
                 row[i] = fieldCreators[i].apply(rowNum);

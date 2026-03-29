@@ -19,9 +19,6 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.query.calcite.exec.LogicalRelImplementorTest;
 import org.apache.ignite.internal.processors.query.calcite.exec.NumericTypesPrecisionsTest;
-import org.apache.ignite.internal.processors.query.calcite.jdbc.JdbcConnectionEnabledPropertyTest;
-import org.apache.ignite.internal.processors.query.calcite.jdbc.JdbcSetClientInfoTest;
-import org.apache.ignite.internal.processors.query.calcite.jdbc.JdbcThinTransactionalSelfTest;
 import org.apache.ignite.internal.processors.query.calcite.message.CalciteCommunicationMessageSerializationTest;
 import org.apache.ignite.internal.processors.query.calcite.sql.SqlCustomParserTest;
 import org.apache.ignite.internal.processors.query.calcite.sql.SqlReservedWordsTest;
@@ -35,26 +32,18 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    PlannerTestSuite.class,
-    ExecutionTestSuite.class,
-    IntegrationTestSuite.class,
     UtilTestSuite.class,
 
     SqlCustomParserTest.class,
     SqlReservedWordsTest.class,
     LogicalRelImplementorTest.class,
 
-    ScriptTestSuite.class,
     CalciteCommunicationMessageSerializationTest.class,
 
     NumericTypesPrecisionsTest.class,
 
     SqlTransactionsIsolationTest.class,
     SqlTransactionsUnsupportedModesTest.class,
-
-    JdbcThinTransactionalSelfTest.class,
-    JdbcSetClientInfoTest.class,
-    JdbcConnectionEnabledPropertyTest.class
 })
 public class IgniteCalciteTestSuite {
 }

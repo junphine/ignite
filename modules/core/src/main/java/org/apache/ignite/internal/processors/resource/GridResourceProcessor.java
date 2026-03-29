@@ -29,10 +29,10 @@ import org.apache.ignite.compute.ComputeLoadBalancer;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskContinuousMapper;
 import org.apache.ignite.compute.ComputeTaskSession;
-import org.apache.ignite.internal.GridInternalWrapper;
 import org.apache.ignite.internal.GridJobContextImpl;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTaskSessionImpl;
+import org.apache.ignite.internal.IgniteInternalWrapper;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -282,8 +282,8 @@ public class GridResourceProcessor extends GridProcessorAdapter {
 
         inject(obj, annSet, null, null, params);
 
-        if (obj instanceof GridInternalWrapper) {
-            Object usrObj = ((GridInternalWrapper<?>)obj).userObject();
+        if (obj instanceof IgniteInternalWrapper) {
+            Object usrObj = ((IgniteInternalWrapper<?>)obj).delegate();
 
             if (usrObj != null)
                 inject(usrObj, annSet, null, null, params);
@@ -436,8 +436,8 @@ public class GridResourceProcessor extends GridProcessorAdapter {
 
         injectToJob(dep, taskCls, obj, ses, jobCtx);
 
-        if (obj instanceof GridInternalWrapper) {
-            Object usrObj = ((GridInternalWrapper<?>)obj).userObject();
+        if (obj instanceof IgniteInternalWrapper) {
+            Object usrObj = ((IgniteInternalWrapper<?>)obj).delegate();
 
             if (usrObj != null)
                 injectToJob(dep, taskCls, usrObj, ses, jobCtx);

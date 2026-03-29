@@ -17,68 +17,65 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep.messages;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
 import java.util.Collection;
-import org.apache.ignite.internal.GridDirectCollection;
-import org.apache.ignite.internal.GridDirectTransient;
-import org.apache.ignite.internal.IgniteCodeGeneratingFail;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Next page response.
  */
-@IgniteCodeGeneratingFail
 public class GridQueryNextPageResponse implements Message {
     /** */
-    private static final long serialVersionUID = 0L;
+    @Order(0)
+    long qryReqId;
 
     /** */
-    private long qryReqId;
+    @Order(1)
+    int segmentId;
 
     /** */
-    private int segmentId;
+    @Order(2)
+    int qry;
 
     /** */
-    private int qry;
+    @Order(3)
+    int page;
 
     /** */
-    private int page;
+    @Order(4)
+    int allRows;
 
     /** */
-    private int allRows;
+    @Order(5)
+    int cols;
 
     /** */
-    private int cols;
-
-    /** */
-    @GridDirectCollection(Message.class)
-    private Collection<Message> vals;
+    @Order(6)
+    Collection<Message> vals;
 
     /**
      * Note, columns count in plain row can differ from {@link #cols}.
      * See {@code org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory#toMessages}.
      * See javadoc for {@code org.h2.result.ResultInterface#getVisibleColumnCount()} and {@code org.h2.result.ResultInterface#currentRow()}.
      */
-    @GridDirectTransient
-    private transient Collection<?> plainRows;
+    private Collection<?> plainRows;
 
     /** */
-    private AffinityTopologyVersion retry;
+    @Order(7)
+    AffinityTopologyVersion retry;
 
     /** Retry cause description. */
-    private String retryCause;
+    @Order(8)
+    String retryCause;
 
     /** Last page flag. */
-    private boolean last;
+    @Order(9)
+    boolean last;
 
     /**
-     * For {@link Externalizable}.
+     * Empty constructor.
      */
     public GridQueryNextPageResponse() {
         // No-op.
@@ -168,186 +165,8 @@ public class GridQueryNextPageResponse implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("allRows", allRows))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeInt("cols", cols))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeInt("page", page))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeInt("qry", qry))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeLong("qryReqId", qryReqId))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeCollection("vals", vals, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeAffinityTopologyVersion("retry", retry))
-                    return false;
-
-                writer.incrementState();
-
-            case 7:
-                if (!writer.writeInt("segmentId", segmentId))
-                    return false;
-
-                writer.incrementState();
-
-            case 8:
-                if (!writer.writeBoolean("last", last))
-                    return false;
-
-                writer.incrementState();
-
-            case 9:
-                if (!writer.writeString("retryCause", retryCause))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                allRows = reader.readInt("allRows");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                cols = reader.readInt("cols");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                page = reader.readInt("page");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                qry = reader.readInt("qry");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                qryReqId = reader.readLong("qryReqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                vals = reader.readCollection("vals", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 6:
-                retry = reader.readAffinityTopologyVersion("retry");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 7:
-                segmentId = reader.readInt("segmentId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 8:
-                last = reader.readBoolean("last");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 9:
-                retryCause = reader.readString("retryCause");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-        }
-
-        return reader.afterMessageRead(GridQueryNextPageResponse.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 109;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 10;
     }
 
     /**
@@ -383,13 +202,6 @@ public class GridQueryNextPageResponse implements Message {
      */
     public boolean last() {
         return last;
-    }
-
-    /**
-     * @param last Last page flag.
-     */
-    public void last(boolean last) {
-        this.last = last;
     }
 
     /** {@inheritDoc} */

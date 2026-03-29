@@ -17,36 +17,30 @@
 
 package org.apache.ignite.internal.managers.communication;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
 import java.util.UUID;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  *
  */
 public class GridIoSecurityAwareMessage extends GridIoMessage {
     /** */
-    private static final long serialVersionUID = 0L;
-
-    /** */
     public static final short TYPE_CODE = 174;
 
-    /** Security subject id that will be used during message processing on an remote node. */
-    private UUID secSubjId;
+    /** Security subject ID that will be used during message processing on a remote node. */
+    @Order(0)
+    UUID secSubjId;
 
     /**
-     * No-op constructor to support {@link Externalizable} interface.
-     * This constructor is not meant to be used for other purposes.
+     * Default constructor.
      */
     public GridIoSecurityAwareMessage() {
         // No-op.
     }
 
     /**
-     * @param secSubjId Security subject id.
+     * @param secSubjId Security subject ID.
      * @param plc Policy.
      * @param topic Communication topic.
      * @param topicOrd Topic ordinal value.
@@ -71,69 +65,14 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
     }
 
     /**
-     * @return Security subject id.
+     * @return Security subject ID.
      */
-    UUID secSubjId() {
+    public UUID securitySubjectId() {
         return secSubjId;
     }
 
     /** {@inheritDoc} */
     @Override public short directType() {
         return TYPE_CODE;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 9;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 8:
-                if (!writer.writeUuid("secSubjId", secSubjId))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 8:
-                secSubjId = reader.readUuid("secSubjId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridIoSecurityAwareMessage.class);
     }
 }

@@ -87,7 +87,25 @@ public enum MessageCollectionItemType {
     MSG,
 
     /** Topology version. */
-    AFFINITY_TOPOLOGY_VERSION;
+    AFFINITY_TOPOLOGY_VERSION,
+
+    /** Key cache object. */
+    KEY_CACHE_OBJECT,
+
+    /** Cache object. */
+    CACHE_OBJECT,
+
+    /** GridLongList. */
+    GRID_LONG_LIST,
+
+    /** Map. */
+    MAP,
+
+    /** Collection. */
+    COLLECTION,
+
+    /** Array. */
+    ARRAY;
 
     /** Enum values. */
     private static final MessageCollectionItemType[] VALS = values();

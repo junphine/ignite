@@ -377,7 +377,7 @@ public class GridLuceneIndex implements AutoCloseable {
             if (coctx == null) // For tests.
                 return (Z)JdbcUtils.deserialize(bytes, null);
 
-            return (Z)coctx.kernalContext().cacheObjects().unmarshal(coctx, bytes, ldr);
+            return (Z)coctx.unmarshal(bytes, ldr);
         }
 
         /**

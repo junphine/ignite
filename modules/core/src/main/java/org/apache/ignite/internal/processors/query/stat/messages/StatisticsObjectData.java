@@ -17,19 +17,16 @@
 
 package org.apache.ignite.internal.processors.query.stat.messages;
 
-import java.nio.ByteBuffer;
+import java.io.Serializable;
 import java.util.Map;
-import org.apache.ignite.internal.GridDirectMap;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.query.stat.StatisticsType;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Statistics for some object (index or table) in database.
  */
-public class StatisticsObjectData implements Message {
+public class StatisticsObjectData implements Message, Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -37,23 +34,28 @@ public class StatisticsObjectData implements Message {
     public static final short TYPE_CODE = 185;
 
     /** Statistics key. */
-    private StatisticsKeyMessage key;
+    @Order(0)
+    StatisticsKeyMessage key;
 
     /** Total row count in current object. */
-    private long rowsCnt;
+    @Order(1)
+    long rowsCnt;
 
     /** Type of statistics. */
-    private StatisticsType type;
+    @Order(2)
+    StatisticsType type;
 
     /** Partition id if statistics was collected by partition. */
-    private int partId;
+    @Order(3)
+    int partId;
 
     /** Update counter if statistics was collected by partition. */
-    private long updCnt;
+    @Order(4)
+    long updCnt;
 
     /** Columns key to statistic map. */
-    @GridDirectMap(keyType = String.class, valueType = StatisticsColumnData.class)
-    private Map<String, StatisticsColumnData> data;
+    @Order(5)
+    Map<String, StatisticsColumnData> data;
 
     /**
      * Constructor.
@@ -131,135 +133,8 @@ public class StatisticsObjectData implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeMap("data", data, MessageCollectionItemType.STRING, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeMessage("key", key))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeInt("partId", partId))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeLong("rowsCnt", rowsCnt))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeByte("type", type != null ? (byte)type.ordinal() : -1))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeLong("updCnt", updCnt))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                data = reader.readMap("data", MessageCollectionItemType.STRING, MessageCollectionItemType.MSG, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                key = reader.readMessage("key");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                partId = reader.readInt("partId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                rowsCnt = reader.readLong("rowsCnt");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                byte typeOrd;
-
-                typeOrd = reader.readByte("type");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                type = StatisticsType.fromOrdinal(typeOrd);
-
-                reader.incrementState();
-
-            case 5:
-                updCnt = reader.readLong("updCnt");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(StatisticsObjectData.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return TYPE_CODE;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 6;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-
-    }
 }

@@ -17,34 +17,31 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.nio.ByteBuffer;
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  *
  */
 public class CacheEvictionEntry implements Message {
     /** */
-    private static final long serialVersionUID = 0L;
-
-    /** */
+    @Order(0)
     @GridToStringInclude
-    private KeyCacheObject key;
+    KeyCacheObject key;
 
     /** */
+    @Order(1)
     @GridToStringInclude
-    private GridCacheVersion ver;
+    GridCacheVersion ver;
 
     /** */
-    private boolean near;
+    @Order(2)
+    boolean near;
 
     /**
-     * Required by {@link Message}.
+     * Default constructor.
      */
     public CacheEvictionEntry() {
         // No-op.
@@ -61,128 +58,9 @@ public class CacheEvictionEntry implements Message {
         this.near = near;
     }
 
-    /**
-     * @return Key.
-     */
-    public KeyCacheObject key() {
-        return key;
-    }
-
-    /**
-     * @return Version.
-     */
-    public GridCacheVersion version() {
-        return ver;
-    }
-
-    /**
-     * @return {@code True} if key should be evicted from near cache.
-     */
-    public boolean near() {
-        return near;
-    }
-
     /** {@inheritDoc} */
     @Override public short directType() {
         return 97;
     }
 
-    /**
-     * @param ctx Context.
-     * @throws IgniteCheckedException If failed.
-     */
-    public void prepareMarshal(GridCacheContext ctx) throws IgniteCheckedException {
-        key.prepareMarshal(ctx.cacheObjectContext());
-    }
-
-    /**
-     * @param ctx Context.
-     * @param ldr Class loader.
-     * @throws IgniteCheckedException If failed.
-     */
-    public void finishUnmarshal(GridCacheContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-        key.finishUnmarshal(ctx.cacheObjectContext(), ldr);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeMessage("key", key))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeBoolean("near", near))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeMessage("ver", ver))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                key = reader.readMessage("key");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                near = reader.readBoolean("near");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                ver = reader.readMessage("ver");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(CacheEvictionEntry.class);
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
-    }
 }

@@ -17,28 +17,26 @@
 
 package org.apache.ignite.internal.processors.authentication;
 
-import java.nio.ByteBuffer;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Message is sent from client to coordinator node when a user needs to authorize on client node.
  */
 public class UserAuthenticateRequestMessage implements Message {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** User name. */
-    private String name;
+    @Order(0)
+    String name;
 
-    /** User password.. */
-    private String passwd;
+    /** User password. */
+    @Order(1)
+    String passwd;
 
     /** Request ID. */
-    private IgniteUuid id = IgniteUuid.randomUuid();
+    @Order(2)
+    IgniteUuid id;
 
     /**
      *
@@ -54,6 +52,7 @@ public class UserAuthenticateRequestMessage implements Message {
     public UserAuthenticateRequestMessage(String name, String passwd) {
         this.name = name;
         this.passwd = passwd;
+        id = IgniteUuid.randomUuid();
     }
 
     /**
@@ -78,90 +77,8 @@ public class UserAuthenticateRequestMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeIgniteUuid("id", id))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeString("name", name))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeString("passwd", passwd))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                id = reader.readIgniteUuid("id");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                name = reader.readString("name");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                passwd = reader.readString("passwd");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(UserAuthenticateRequestMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 131;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op
     }
 
     /** {@inheritDoc} */

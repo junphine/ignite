@@ -17,11 +17,13 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+
+import java.io.Externalizable;
+import java.nio.ByteBuffer;
 
 /**
  * Basic sync message.
@@ -31,10 +33,12 @@ public class IgfsSyncMessage extends IgfsCommunicationMessage {
     private static final long serialVersionUID = 0L;
 
     /** Coordinator node order. */
-    private long order;
+    @Order(0)
+    long order;
 
     /** Response flag. */
-    private boolean res;
+    @Order(1)
+    boolean res;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -72,81 +76,8 @@ public class IgfsSyncMessage extends IgfsCommunicationMessage {
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeLong("order", order))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeBoolean("res", res))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                order = reader.readLong("order");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                res = reader.readBoolean("res");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(IgfsSyncMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 71;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
-    }
 }

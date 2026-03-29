@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.CacheRegisterMetadataLocallyT
 import org.apache.ignite.internal.processors.cache.ClientReconnectAfterClusterRestartTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeDoesNotBreakSqlSelectTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
+import org.apache.ignite.internal.processors.cache.ComputeCacheCollectionsP2PTest;
 import org.apache.ignite.internal.processors.cache.EnumClassImplementingIndexedInterfaceTest;
 import org.apache.ignite.internal.processors.cache.FieldsPrecisionTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapSelfTest;
@@ -48,6 +49,7 @@ import org.apache.ignite.internal.processors.cache.WrongIndexedTypesTest;
 import org.apache.ignite.internal.processors.cache.index.H2TreeCorruptedTreeExceptionTest;
 import org.apache.ignite.internal.processors.cache.index.IndexCorruptionRebuildTest;
 import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
+import org.apache.ignite.internal.processors.cache.persistence.filename.SQLCacheConfigStoragePathTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheSizeTtlTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicPartitionedSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlReadOnlyModeSelfTest;
@@ -104,6 +106,7 @@ import org.junit.runners.Suite;
 
     ClusterReadOnlyModeSqlTest.class,
     GridCacheSqlDdlClusterReadOnlyModeTest.class,
+    ComputeCacheCollectionsP2PTest.class,
 
     ClusterReadOnlyModeDoesNotBreakSqlSelectTest.class,
 
@@ -122,7 +125,8 @@ import org.junit.runners.Suite;
 
     EnumClassImplementingIndexedInterfaceTest.class,
 
-    IndexCorruptionRebuildTest.class
+    IndexCorruptionRebuildTest.class,
+    SQLCacheConfigStoragePathTest.class
 })
 public class IgniteCacheWithIndexingTestSuite {
 }

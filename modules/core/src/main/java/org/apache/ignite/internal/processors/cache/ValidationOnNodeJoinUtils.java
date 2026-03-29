@@ -18,12 +18,15 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -48,8 +51,8 @@ import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.query.QuerySchemaPatch;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.thread.context.Scope;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -70,6 +73,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CONSISTENCY_C
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_AWARE_QUERIES_ENABLED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_SERIALIZABLE_ENABLED;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isDefaultDataRegionPersistent;
+import static org.apache.ignite.internal.processors.cache.persistence.filename.FileTreeUtils.nodeStorages;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 
 /**
@@ -148,7 +152,7 @@ public class ValidationOnNodeJoinUtils {
 
             for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : nodeData.caches().values()) {
                 if (secCtx != null && cacheInfo.cacheType() == CacheType.USER) {
-                    try (OperationSecurityContext s = ctx.security().withContext(secCtx)) {
+                    try (Scope ignored = ctx.security().withContext(secCtx)) {
                         GridCacheProcessor.authorizeCacheCreate(ctx.security(), cacheInfo.cacheData().config());
                     }
                     catch (SecurityException ex) {
@@ -313,23 +317,6 @@ public class ValidationOnNodeJoinUtils {
             throw new IgniteCheckedException("Cannot enable write-through (writer or store is not provided) " +
                 "for cache: " + U.maskName(cc.getName()));
 
-        long delay = cc.getRebalanceDelay();
-
-        if (delay != 0) {
-            if (cc.getCacheMode() != PARTITIONED)
-                U.warn(log, "Rebalance delay is supported only for partitioned caches (will ignore): " + (cc.getName()));
-            else if (cc.getRebalanceMode() == SYNC) {
-                if (delay < 0) {
-                    U.warn(log, "Ignoring SYNC rebalance mode with manual rebalance start (node will not wait for " +
-                        "rebalancing to be finished): " + U.maskName(cc.getName()));
-                }
-                else {
-                    U.warn(log, "Using SYNC rebalance mode with rebalance delay (node will wait until rebalancing is " +
-                        "initiated for " + delay + "ms) for cache: " + U.maskName(cc.getName()));
-                }
-            }
-        }
-
         if (cc.getAtomicityMode() == ATOMIC)
             apply(assertParam, cc.getTransactionManagerLookupClassName() == null,
                 "transaction manager can not be used with ATOMIC cache");
@@ -387,6 +374,37 @@ public class ValidationOnNodeJoinUtils {
             if (cc.getDiskPageCompression() != DiskPageCompression.DISABLED)
                 throw new IgniteCheckedException("Encryption cannot be used with disk page compression " +
                     cacheSpec.toString());
+        }
+
+        if (!ctx.clientNode()) {
+            if (!F.isEmpty(cc.getStoragePaths())) {
+                List<String> csp = Arrays.asList(cc.getStoragePaths());
+
+                if (csp.size() != new HashSet<>(csp).size()) {
+                    throw new IgniteCheckedException("CacheConfiguration contains duplicates " +
+                        "[storagePaths=" + Arrays.toString(cc.getStoragePaths()) + ']');
+                }
+
+                Set<String> nodeStorages = nodeStorages(c.getDataStorageConfiguration());
+
+                if (!nodeStorages.containsAll(csp)) {
+                    throw new IgniteCheckedException(
+                        "Unknown storage path. Storage path must be from DataStorageConfiguration " +
+                            "[cacheStorage=" + csp + ", nodeStorages=" + nodeStorages + ']'
+                    );
+                }
+            }
+
+            if (!F.isEmpty(cc.getIndexPath())) {
+                Set<String> nodeStorages = nodeStorages(c.getDataStorageConfiguration());
+
+                if (!nodeStorages.contains(cc.getIndexPath())) {
+                    throw new IgniteCheckedException(
+                        "Unknown storage path. Storage path must be from DataStorageConfiguration " +
+                            "[indexPath=" + cc.getIndexPath() + ", nodeStorages=" + nodeStorages + ']'
+                    );
+                }
+            }
         }
     }
 

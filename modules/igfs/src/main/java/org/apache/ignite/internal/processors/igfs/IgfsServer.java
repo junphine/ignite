@@ -17,25 +17,16 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.io.BufferedOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.igfs.IgfsIpcEndpointConfiguration;
 import org.apache.ignite.igfs.IgfsIpcEndpointType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.igfs.common.IgfsControlResponse;
-import org.apache.ignite.internal.igfs.common.IgfsDataInputStream;
-import org.apache.ignite.internal.igfs.common.IgfsDataOutputStream;
-import org.apache.ignite.internal.igfs.common.IgfsIpcCommand;
-import org.apache.ignite.internal.igfs.common.IgfsMarshaller;
-import org.apache.ignite.internal.igfs.common.IgfsMessage;
+import org.apache.ignite.internal.igfs.common.*;
 import org.apache.ignite.internal.util.ipc.IpcEndpoint;
 import org.apache.ignite.internal.util.ipc.IpcServerEndpoint;
 import org.apache.ignite.internal.util.ipc.loopback.IpcServerTcpEndpoint;
-
 import org.apache.ignite.internal.util.typedef.CIX1;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -43,6 +34,10 @@ import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 import org.jsr166.ConcurrentLinkedDeque8;
+
+import java.io.BufferedOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
 
 import static org.apache.ignite.spi.IgnitePortProtocol.TCP;
 
@@ -178,7 +173,7 @@ public class IgfsServer {
     public void onKernalStart() {
         // Accept connections only when grid is ready.
         if (srvEndpoint != null)
-            new IgniteThread(acceptWorker).start();
+            new IgniteThread(igfsCtx.kernalContext().igniteInstanceName(),"IgfsServer", acceptWorker).start();
     }
 
     /**
@@ -438,7 +433,7 @@ public class IgfsServer {
 
                     ClientWorker worker = new ClientWorker(client, acceptCnt++);
 
-                    IgniteThread workerThread = new IgniteThread(worker);
+                    IgniteThread workerThread = new IgniteThread(igfsCtx.kernalContext().igniteInstanceName(),"IgfsServerWork", worker);
 
                     ConcurrentLinkedDeque8.Node<ClientWorker> node = clientWorkers.addx(worker);
 

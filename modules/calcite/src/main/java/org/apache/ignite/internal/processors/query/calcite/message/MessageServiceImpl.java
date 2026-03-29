@@ -21,7 +21,6 @@ import java.util.EnumMap;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
@@ -36,7 +35,6 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.calcite.CalciteQueryProcessor;
 import org.apache.ignite.internal.processors.query.calcite.exec.QueryTaskExecutor;
 import org.apache.ignite.internal.processors.query.calcite.util.AbstractService;
-import org.apache.ignite.internal.processors.query.calcite.util.Commons;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -128,7 +126,7 @@ public class MessageServiceImpl extends AbstractService implements MessageServic
     @Override public void onStart(GridKernalContext ctx) {
         localNodeId(ctx.localNodeId());
 
-        CalciteQueryProcessor proc = Objects.requireNonNull(Commons.lookupComponent(ctx, CalciteQueryProcessor.class));
+        CalciteQueryProcessor proc = queryProcessor(ctx);
 
         taskExecutor(proc.taskExecutor());
         failureProcessor(proc.failureProcessor());
@@ -181,8 +179,8 @@ public class MessageServiceImpl extends AbstractService implements MessageServic
     /** */
     protected void prepareMarshal(Message msg) throws IgniteCheckedException {
         try {
-            if (msg instanceof MarshalableMessage)
-                ((MarshalableMessage)msg).prepareMarshal(ctx);
+            if (msg instanceof CalciteMarshalableMessage)
+                ((CalciteMarshalableMessage)msg).prepareMarshal(ctx);
         }
         catch (Exception e) {
             failureProcessor().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
@@ -194,8 +192,8 @@ public class MessageServiceImpl extends AbstractService implements MessageServic
     /** */
     protected void prepareUnmarshal(Message msg) throws IgniteCheckedException {
         try {
-            if (msg instanceof MarshalableMessage)
-                ((MarshalableMessage)msg).prepareUnmarshal(ctx);
+            if (msg instanceof CalciteMarshalableMessage)
+                ((CalciteMarshalableMessage)msg).prepareUnmarshal(ctx);
         }
         catch (Exception e) {
             failureProcessor().process(new FailureContext(FailureType.CRITICAL_ERROR, e));

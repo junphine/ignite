@@ -17,9 +17,10 @@
 
 package org.apache.ignite.cache.eviction.igfs;
 
-import java.util.Collection;
 import org.apache.ignite.mxbean.MXBeanDescription;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
 
 /**
  * MBean for {@code IGFS per-block LRU} eviction policy.

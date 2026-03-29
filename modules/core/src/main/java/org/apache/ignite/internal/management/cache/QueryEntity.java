@@ -26,8 +26,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -40,34 +40,44 @@ public class QueryEntity extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** Key class used to store key in cache. */
-    private String keyType;
+    @Order(0)
+    String keyType;
 
     /** Value class used to store value in cache. */
-    private String valType;
+    @Order(1)
+    String valType;
 
     /** Fields to be queried, in addition to indexed fields. */
-    private Map<String, String> qryFlds;
+    @Order(2)
+    Map<String, String> qryFlds;
 
     /** Key fields. */
-    private List<String> keyFields;
+    @Order(3)
+    List<String> keyFields;
 
     /** Aliases. */
-    private Map<String, String> aliases;
+    @Order(4)
+    Map<String, String> aliases;
 
     /** Table name. */
-    private String tblName;
+    @Order(5)
+    String tblName;
     
     /** Table comment. */
-    private String tblComment;
+    @Order(9)
+    String tblComment;
 
     /** Key name. Can be used in field list to denote the key as a whole. */
-    private String keyFieldName;
+    @Order(6)
+    String keyFieldName;
 
     /** Value name. Can be used in field list to denote the entire value. */
-    private String valFieldName;
+    @Order(7)
+    String valFieldName;
 
     /** Fields to create group indexes for. */
-    private List<QueryIndex> grps;
+    @Order(8)
+    List<QueryIndex> grps;
 
     /**
      * @param qryEntities Collection of query entities.
@@ -194,11 +204,11 @@ public class QueryEntity extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
         U.writeString(out, keyType);
         U.writeString(out, valType);
         U.writeCollection(out, keyFields);
-        IgniteUtils.writeStringMap(out, qryFlds);
+        U.writeStringMap(out, qryFlds);
         U.writeMap(out, aliases);
         U.writeCollection(out, grps);
         U.writeString(out, tblName);
@@ -208,11 +218,11 @@ public class QueryEntity extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         keyType = U.readString(in);
         valType = U.readString(in);
         keyFields = U.readList(in);
-        qryFlds = IgniteUtils.readStringMap(in);
+        qryFlds = U.readStringMap(in);
         aliases = U.readMap(in);
         grps = U.readList(in);
         tblName = U.readString(in);

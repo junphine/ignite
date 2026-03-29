@@ -17,39 +17,33 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.nio.ByteBuffer;
 import java.util.UUID;
-import org.apache.ignite.internal.GridDirectTransient;
-import org.apache.ignite.internal.IgniteCodeGeneratingFail;
-import org.apache.ignite.internal.processors.query.schema.message.SchemaOperationStatusMessage;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * WAL state ack message (sent from participant node to coordinator).
  */
-@IgniteCodeGeneratingFail
 public class WalStateAckMessage implements Message {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Operation ID. */
-    private UUID opId;
+    @Order(0)
+    UUID opId;
 
     /** Affinity node flag. */
-    private boolean affNode;
+    @Order(1)
+    boolean affNode;
 
     /** Operation result. */
-    private boolean changed;
+    @Order(2)
+    boolean changed;
 
     /** Error message. */
-    private String errMsg;
+    @Order(3)
+    String errMsg;
 
     /** Sender node ID. */
-    @GridDirectTransient
     private UUID sndNodeId;
 
     /**
@@ -117,102 +111,8 @@ public class WalStateAckMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeUuid("opId", opId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeBoolean("affNode", affNode))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeBoolean("changed", changed))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeString("errMsg", errMsg))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                opId = reader.readUuid("opId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                affNode = reader.readBoolean("affNode");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                changed = reader.readBoolean("changed");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                errMsg = reader.readString("errMsg");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-        }
-
-        return reader.afterMessageRead(SchemaOperationStatusMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 129;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 4;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */

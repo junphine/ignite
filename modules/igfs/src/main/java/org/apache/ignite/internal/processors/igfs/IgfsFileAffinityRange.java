@@ -17,6 +17,16 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
+import org.apache.ignite.binary.*;
+import org.apache.ignite.internal.binary.BinaryUtils;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.MessageReader;
+import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -26,22 +36,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
-
-import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.binary.BinaryRawWriter;
-import org.apache.ignite.binary.BinaryReader;
-import org.apache.ignite.binary.BinaryWriter;
-import org.apache.ignite.binary.Binarylizable;
-import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Affinity range.
@@ -243,10 +237,6 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
         return startOff == other.startOff && endOff == other.endOff;
     }
 
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
@@ -264,50 +254,32 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
         endOff = in.readLong();
     }
 
-    /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriter writer) throws BinaryObjectException {
         writeRawBinary(writer.rawWriter());
     }
 
-    /** {@inheritDoc} */
     @Override public void readBinary(BinaryReader reader) throws BinaryObjectException {
         readRawBinary(reader.rawReader());
     }
 
-    /**
-     * Writes fields to provided writer.
-     *
-     * @param writer Writer.
-     * @throws BinaryObjectException If fails.
-     */
     public void writeRawBinary(BinaryRawWriter writer) throws BinaryObjectException {
         BinaryUtils.writeIgniteUuid(writer, affKey);
-
         writer.writeInt(status);
         writer.writeLong(startOff);
         writer.writeLong(endOff);
     }
-
-    /**
-     * Reads fields from provided reader.
-     *
-     * @param reader Reader.
-     * @throws BinaryObjectException If fails.
-     */
     public void readRawBinary(BinaryRawReader reader) throws BinaryObjectException {
         affKey = BinaryUtils.readIgniteUuid(reader);
-
         status = reader.readInt();
         startOff = reader.readLong();
         endOff = reader.readLong();
     }
-
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
         if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
+            if (!writer.writeHeader(directType()))
                 return false;
 
             writer.onHeaderWritten();
@@ -315,31 +287,31 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeIgniteUuid("affKey", affKey))
+                if (!writer.writeIgniteUuid(affKey))
                     return false;
 
                 writer.incrementState();
 
             case 1:
-                if (!writer.writeBoolean("done", done))
+                if (!writer.writeBoolean(done))
                     return false;
 
                 writer.incrementState();
 
             case 2:
-                if (!writer.writeLong("endOff", endOff))
+                if (!writer.writeLong( endOff))
                     return false;
 
                 writer.incrementState();
 
             case 3:
-                if (!writer.writeLong("startOff", startOff))
+                if (!writer.writeLong(startOff))
                     return false;
 
                 writer.incrementState();
 
             case 4:
-                if (!writer.writeInt("status", status))
+                if (!writer.writeInt(status))
                     return false;
 
                 writer.incrementState();
@@ -353,12 +325,9 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         reader.setBuffer(buf);
 
-        if (!reader.beforeMessageRead())
-            return false;
-
         switch (reader.state()) {
             case 0:
-                affKey = reader.readIgniteUuid("affKey");
+                affKey = reader.readIgniteUuid();
 
                 if (!reader.isLastRead())
                     return false;
@@ -366,7 +335,7 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
                 reader.incrementState();
 
             case 1:
-                done = reader.readBoolean("done");
+                done = reader.readBoolean();
 
                 if (!reader.isLastRead())
                     return false;
@@ -374,7 +343,7 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
                 reader.incrementState();
 
             case 2:
-                endOff = reader.readLong("endOff");
+                endOff = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -382,7 +351,7 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
                 reader.incrementState();
 
             case 3:
-                startOff = reader.readLong("startOff");
+                startOff = reader.readLong();
 
                 if (!reader.isLastRead())
                     return false;
@@ -390,7 +359,7 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
                 reader.incrementState();
 
             case 4:
-                status = reader.readInt("status");
+                status = reader.readInt();
 
                 if (!reader.isLastRead())
                     return false;
@@ -399,7 +368,7 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
 
         }
 
-        return reader.afterMessageRead(IgfsFileAffinityRange.class);
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -408,7 +377,7 @@ public class IgfsFileAffinityRange implements Message, Externalizable, Binaryliz
     }
 
     /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
+    public byte fieldsCount() {
         return 5;
     }
 

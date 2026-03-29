@@ -37,6 +37,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLEngine;
@@ -50,10 +51,12 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.direct.DirectMessageWriter;
 import org.apache.ignite.internal.managers.GridManager;
 import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.tracing.Tracing;
+import org.apache.ignite.internal.thread.IgniteThreadFactory;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.function.ThrowableBiFunction;
@@ -85,6 +88,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.apache.ignite.plugin.extensions.communication.MessageFormatter;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
+import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.spi.ExponentialBackoffTimeoutStrategy;
 import org.apache.ignite.spi.IgniteSpiContext;
@@ -94,11 +98,10 @@ import org.apache.ignite.spi.TimeoutStrategy;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
-import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessageSerializer;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
 import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
-import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
@@ -106,6 +109,7 @@ import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONN_IDX_META;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONSISTENT_ID_META;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.HANDSHAKE_WAIT_MSG_TYPE;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.handshakeTimeoutException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.isRecoverableException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.nodeAddresses;
@@ -129,6 +133,9 @@ public class GridNioServerWrapper {
 
     /** Default delay between reconnects attempts in case of temporary network issues. */
     private static final int DFLT_RECONNECT_DELAY = 50;
+
+    /** Minimum frequency (in milliseconds) of high message queue size warning. */
+    private static final long MIN_MSG_QUEUE_SIZE_WARN_FREQUENCY = 30_000L;
 
     /** Channel meta used for establishing channel connections. */
     static final int CHANNEL_FUT_META = GridNioSessionMetaKey.nextUniqueKey();
@@ -202,8 +209,12 @@ public class GridNioServerWrapper {
     private volatile ThrowableSupplier<SocketChannel, IOException> socketChannelFactory = SocketChannel::open;
 
     /** Enable forcible node kill. */
-    private boolean forcibleNodeKillEnabled = IgniteSystemProperties
+    private final boolean forcibleNodeKillEnabled = IgniteSystemProperties
         .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
+
+    /** Message queue size to print warning. */
+    private final int msgQueueWarningSize = IgniteSystemProperties.getInteger(
+        IgniteSystemProperties.IGNITE_TCP_COMM_MSG_QUEUE_WARN_SIZE, 0);
 
     /** NIO server. */
     private GridNioServer<Message> nioSrv;
@@ -219,6 +230,9 @@ public class GridNioServerWrapper {
 
     /** Executor for establishing a connection to a node. */
     private final TcpHandshakeExecutor tcpHandshakeExecutor;
+
+    /** Timestamp of the last high message queue size warning. */
+    private final AtomicLong lastMsqQueueSizeWarningTs = new AtomicLong();
 
     /**
      * @param log Logger.
@@ -329,8 +343,8 @@ public class GridNioServerWrapper {
      * <li>The remote GridNioAcceptWorker thread accepts new connection.</li>
      * <li>The remote node sends back the {@link NodeIdMessage}.</li>
      * <li>The local node reads NodeIdMessage from created channel.</li>
-     * <li>The local node sends the {@link HandshakeMessage2} to remote.</li>
-     * <li>The remote node processes {@link HandshakeMessage2} in {@link GridNioServerListener#onMessage(GridNioSession,
+     * <li>The local node sends the {@link HandshakeMessage} to remote.</li>
+     * <li>The remote node processes {@link HandshakeMessage} in {@link GridNioServerListener#onMessage(GridNioSession,
      * Object)}.</li>
      * <li>The remote node sends back the {@link RecoveryLastReceivedMessage}.</li>
      * </ol>
@@ -485,7 +499,7 @@ public class GridNioServerWrapper {
                             node.id(),
                             timeout,
                             sslMeta,
-                            new HandshakeMessage2(locNode.id(),
+                            new HandshakeMessage(locNode.id(),
                                 recoveryDesc.incrementConnectCount(),
                                 recoveryDesc.received(),
                                 connIdx));
@@ -807,8 +821,21 @@ public class GridNioServerWrapper {
                         get().register(directType, supplier);
                     }
 
+                    @Override public void register(short directType, Supplier<Message> supplier,
+                        MessageSerializer serializer) throws IgniteException {
+                        get().register(directType, supplier, serializer);
+                    }
+
                     @Nullable @Override public Message create(short type) {
                         return get().create(type);
+                    }
+
+                    @Override public MessageSerializer serializer(short type) {
+                        // Enable sending wait message for a communication peer while context isn't initialized.
+                        if (impl == null && type == HANDSHAKE_WAIT_MSG_TYPE)
+                            return new HandshakeWaitMessageSerializer();
+
+                        return get().serializer(type);
                     }
 
                     private MessageFactory get() {
@@ -839,9 +866,7 @@ public class GridNioServerWrapper {
 
                         assert formatter != null;
 
-                        ConnectionKey key = ses.meta(CONN_IDX_META);
-
-                        return key != null ? formatter.reader(key.nodeId(), msgFactory) : null;
+                        return formatter.reader(msgFactory);
                     }
                 };
 
@@ -851,6 +876,10 @@ public class GridNioServerWrapper {
                     private MessageFormatter formatter;
 
                     @Override public MessageWriter writer(GridNioSession ses) throws IgniteCheckedException {
+                        // Enable sending wait message for a communication peer while context isn't initialized.
+                        if (!stateProvider.spiContextAvailable())
+                            return new DirectMessageWriter(msgFactory, igniteCfg.getNetworkCompressionLevel());
+
                         final IgniteSpiContext ctx = stateProvider.getSpiContextWithoutInitialLatch();
 
                         if (formatter == null || context != ctx) {
@@ -861,9 +890,7 @@ public class GridNioServerWrapper {
 
                         assert formatter != null;
 
-                        ConnectionKey key = ses.meta(CONN_IDX_META);
-
-                        return key != null ? formatter.writer(key.nodeId()) : null;
+                        return formatter.writer(msgFactory);
                     }
                 };
 
@@ -876,7 +903,9 @@ public class GridNioServerWrapper {
                 boolean clientMode = Boolean.TRUE.equals(igniteCfg.isClientMode());
 
                 IgniteBiInClosure<GridNioSession, Integer> queueSizeMonitor =
-                    !clientMode && cfg.slowClientQueueLimit() > 0 ? this::checkClientQueueSize : null;
+                    !clientMode && (cfg.slowClientQueueLimit() > 0 || msgQueueWarningSize > 0)
+                        ? msgQueueWarningSize > 0 ? this::checkNodeQueueSize : this::checkClientQueueSize
+                        : null;
 
                 List<GridNioFilter> filters = new ArrayList<>();
 
@@ -924,7 +953,8 @@ public class GridNioServerWrapper {
                     .skipRecoveryPredicate(skipRecoveryPred)
                     .messageQueueSizeListener(queueSizeMonitor)
                     .tracing(tracing)
-                    .readWriteSelectorsAssign(cfg.usePairedConnections());
+                    .readWriteSelectorsAssign(cfg.usePairedConnections())
+                    .messageFactory(msgFactory);
 
                 if (metricMgr != null) {
                     builder.workerListener(workersRegistry)
@@ -1173,7 +1203,7 @@ public class GridNioServerWrapper {
      * @param rmtNodeId Remote node.
      * @param timeout Timeout for handshake.
      * @param sslMeta Session meta.
-     * @param msg {@link HandshakeMessage} or {@link HandshakeMessage2} to send.
+     * @param msg {@link HandshakeMessage} to send.
      * @return Handshake response.
      * @throws IgniteCheckedException If handshake failed or wasn't completed withing timeout.
      */
@@ -1190,7 +1220,7 @@ public class GridNioServerWrapper {
         handshakeTimeoutExecutorService.schedule(timeoutObj, timeout, TimeUnit.MILLISECONDS);
 
         try {
-            return tcpHandshakeExecutor.tcpHandshake(ch, rmtNodeId, sslMeta, msg);
+            return tcpHandshakeExecutor.tcpHandshake(ch, rmtNodeId, sslMeta, msg, stateProvider.getSpiContext());
         }
         finally {
             if (!timeoutObj.cancel())
@@ -1239,6 +1269,31 @@ public class GridNioServerWrapper {
                 }
             }
         }
+    }
+
+    /**
+     * Checks node message queue size and produce warning if message queue size exceeds the configured threshold.
+     *
+     * @param ses Node communication session.
+     * @param msgQueueSize Message queue size.
+     */
+    private void checkNodeQueueSize(GridNioSession ses, int msgQueueSize) {
+        if (msgQueueWarningSize > 0 && msgQueueSize > msgQueueWarningSize) {
+            long lastWarnTs = lastMsqQueueSizeWarningTs.get();
+
+            if (U.currentTimeMillis() > lastWarnTs + MIN_MSG_QUEUE_SIZE_WARN_FREQUENCY) {
+                if (lastMsqQueueSizeWarningTs.compareAndSet(lastWarnTs, U.currentTimeMillis())) {
+                    ConnectionKey id = ses.meta(CONN_IDX_META);
+                    if (id != null) {
+                        log.warning("Outbound message queue size for node exceeded configured " +
+                            "messageQueueWarningSize value, it may be caused by node failure or a network problems " +
+                            "[node=" + id.nodeId() + ", msqQueueSize=" + msgQueueSize + ']');
+                    }
+                }
+            }
+        }
+
+        checkClientQueueSize(ses, msgQueueSize);
     }
 
     /**

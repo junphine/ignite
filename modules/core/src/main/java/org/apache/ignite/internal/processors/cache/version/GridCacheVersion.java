@@ -21,13 +21,11 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.nio.ByteBuffer;
 import java.util.UUID;
 import org.apache.ignite.cache.CacheEntryVersion;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Grid unique version.
@@ -46,13 +44,16 @@ public class GridCacheVersion implements Message, Externalizable, CacheEntryVers
     private static final int DR_ID_MASK = 0x1F;
 
     /** Topology version. */
-    private int topVer;
+    @Order(0)
+    int topVer;
 
     /** Node order (used as global order) and DR ID. */
-    private int nodeOrderDrId;
+    @Order(1)
+    int nodeOrderDrId;
 
     /** Order. */
-    private long order;
+    @Order(2)
+    long order;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -173,23 +174,10 @@ public class GridCacheVersion implements Message, Externalizable, CacheEntryVers
     }
 
     /**
-     * @param ver Version.
-     * @return {@code True} if this version is less or equal.
-     */
-    public boolean isLessEqual(GridCacheVersion ver) {
-        return compareTo(ver) <= 0;
-    }
-
-    /**
      * @return Version represented as {@code IgniteUuid}
      */
     public IgniteUuid asIgniteUuid() {
         return new IgniteUuid(new UUID(topVer, nodeOrderDrId), order);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -246,85 +234,8 @@ public class GridCacheVersion implements Message, Externalizable, CacheEntryVers
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("nodeOrderDrId", nodeOrderDrId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeLong("order", order))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeInt("topVer", topVer))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                nodeOrderDrId = reader.readInt("nodeOrderDrId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                order = reader.readLong("order");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                topVer = reader.readInt("topVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridCacheVersion.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 86;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
     }
 
     /** {@inheritDoc} */

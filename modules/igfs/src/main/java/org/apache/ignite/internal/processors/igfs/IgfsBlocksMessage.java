@@ -17,14 +17,14 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
+import org.apache.ignite.internal.GridDirectMap;
+import org.apache.ignite.internal.Order;
+import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.plugin.extensions.communication.*;
+
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import java.util.Map;
-import org.apache.ignite.internal.GridDirectMap;
-import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * IGFS write blocks message.
@@ -34,14 +34,17 @@ public class IgfsBlocksMessage extends IgfsCommunicationMessage {
     private static final long serialVersionUID = 0L;
 
     /** File id. */
-    private IgniteUuid fileId;
+    @Order(0)
+    IgniteUuid fileId;
 
     /** Batch id */
-    private long id;
+    @Order(1)
+    long id;
 
     /** Blocks to store. */
     @GridDirectMap(keyType = IgfsBlockKey.class, valueType = byte[].class)
-    private Map<IgfsBlockKey, byte[]> blocks;
+    @Order(2)
+    Map<IgfsBlockKey, byte[]> blocks;
 
     /**
      * Empty constructor required by {@link Externalizable}
@@ -85,95 +88,8 @@ public class IgfsBlocksMessage extends IgfsCommunicationMessage {
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeMap("blocks", blocks, MessageCollectionItemType.MSG, MessageCollectionItemType.BYTE_ARR))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeIgniteUuid("fileId", fileId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeLong("id", id))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                blocks = reader.readMap("blocks", MessageCollectionItemType.MSG, MessageCollectionItemType.BYTE_ARR, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                fileId = reader.readIgniteUuid("fileId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                id = reader.readLong("id");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(IgfsBlocksMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 66;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
-    }
 }

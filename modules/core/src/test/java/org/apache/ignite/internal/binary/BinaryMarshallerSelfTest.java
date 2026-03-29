@@ -99,7 +99,6 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -2787,7 +2786,7 @@ public class BinaryMarshallerSelfTest extends AbstractBinaryArraysTest {
 
         BinaryObjectImpl po = marshal(simpleObject(), marsh);
 
-        CacheObjectContext coCtx = new CacheObjectContext(newContext(), null, null, false, false, true, false, false);
+        CacheObjectContext coCtx = new CacheObjectContext(newContext(), null, null, false, false, true, false);
 
         assert po.value(coCtx, false) == po.value(coCtx, false);
 
@@ -3020,7 +3019,7 @@ public class BinaryMarshallerSelfTest extends AbstractBinaryArraysTest {
 
         BinaryMarshaller marsh = binaryMarshaller();
 
-        try (BinaryWriterEx writer = BinaryUtils.writer(binaryContext(marsh))) {
+        try (BinaryWriterEx writer = BinaryUtils.writer(binaryContext(marsh), false, GridBinaryMarshaller.UNREGISTERED_TYPE_ID)) {
             assertEquals(true, BinaryStreamsTestUtils.threadLocalIsAcquired());
 
             writer.writeString("Thread local test");
@@ -4166,8 +4165,6 @@ public class BinaryMarshallerSelfTest extends AbstractBinaryArraysTest {
         });
         iCfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
 
-        BinaryContext ctx = new BinaryContext(BinaryUtils.cachingMetadataHandler(), iCfg, new NullLogger());
-
         BinaryMarshaller marsh = new BinaryMarshaller();
 
         MarshallerContextTestImpl marshCtx = new MarshallerContextTestImpl(null, excludedClasses);
@@ -4181,8 +4178,7 @@ public class BinaryMarshallerSelfTest extends AbstractBinaryArraysTest {
         marshCtx.onMarshallerProcessorStarted(kernCtx, null);
 
         marsh.setContext(marshCtx);
-
-        marsh.setBinaryContext(ctx, iCfg);
+        marsh.setBinaryContext(U.binaryContext(marsh, iCfg));
 
         return marsh;
     }
@@ -4227,8 +4223,6 @@ public class BinaryMarshallerSelfTest extends AbstractBinaryArraysTest {
         });
         iCfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
 
-        BinaryContext ctx = new BinaryContext(BinaryUtils.cachingMetadataHandler(), iCfg, new NullLogger());
-
         BinaryMarshaller marsh = new BinaryMarshaller();
 
         MarshallerContextTestImpl marshCtx = new MarshallerContextTestImpl(null, excludedClasses);
@@ -4243,7 +4237,9 @@ public class BinaryMarshallerSelfTest extends AbstractBinaryArraysTest {
 
         marsh.setContext(marshCtx);
 
-        marsh.setBinaryContext(ctx, iCfg);
+        BinaryContext ctx = U.binaryContext(marsh, iCfg);
+
+        marsh.setBinaryContext(ctx);
 
         return BinaryObjectBuilders.builder(ctx, typeName);
     }

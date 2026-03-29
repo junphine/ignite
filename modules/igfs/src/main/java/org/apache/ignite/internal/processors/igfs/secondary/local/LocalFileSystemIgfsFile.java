@@ -17,12 +17,13 @@
 
 package org.apache.ignite.internal.processors.igfs.secondary.local;
 
-import java.util.Collections;
-import java.util.Map;
 import org.apache.ignite.igfs.IgfsFile;
 import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.internal.processors.igfs.IgfsUtils;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Implementation of the IgfsFile interface for the local filesystem.

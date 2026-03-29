@@ -100,11 +100,11 @@ public class ObjectSizeCalculator<Row> {
         // Assume objects is not deserialized.
         BinaryUtils.unwrapFuncForSizeCalc().forEach((cls, unwrapFunc) ->
             addSysClsSize(cls, (c, bo) -> c.sizeOf0(unwrapFunc.apply(bo), true)));
-        BinaryUtils.sizeProviders().forEach((cls, szFunc) ->
+        BinaryUtils.binariesFactory.sizeProviders().forEach((cls, szFunc) ->
             addSysClsSize(cls, (c, bo) -> szFunc.applyAsInt(bo)));
 
         // Other.
-        addSysClsSize(GroupKey.class, (c, k) -> c.sizeOf0(k.fields(), true));
+        addSysClsSize(GroupKey.class, (c, k) -> c.sizeOf0(k.row(), true));
         addSysClsSize(UUID.class, null);
         addSysClsSize(BigDecimal.class, (c, bd) -> c.sizeOf0(bd.unscaledValue(), true));
         long intArrOffset = GridUnsafe.arrayBaseOffset(int[].class);

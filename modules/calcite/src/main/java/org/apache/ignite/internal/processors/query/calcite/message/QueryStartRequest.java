@@ -17,65 +17,67 @@
 
 package org.apache.ignite.internal.processors.query.calcite.message;
 
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridDirectCollection;
-import org.apache.ignite.internal.GridDirectMap;
-import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.query.calcite.metadata.FragmentDescription;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 /**
  *
  */
-public class QueryStartRequest implements MarshalableMessage, ExecutionContextAware {
+public class QueryStartRequest implements CalciteMarshalableMessage, ExecutionContextAware {
     /** */
-    private String schema;
+    @Order(0)
+    String schema;
 
     /** */
-    private UUID qryId;
+    @Order(1)
+    UUID qryId;
 
     /** */
-    private long originatingQryId;
+    @Order(2)
+    long originatingQryId;
 
     /** */
-    private AffinityTopologyVersion ver;
+    @Order(3)
+    AffinityTopologyVersion ver;
 
     /** */
-    private FragmentDescription fragmentDesc;
+    @Order(4)
+    FragmentDescription fragmentDesc;
 
     /** */
-    private String root;
+    @Order(5)
+    String root;
 
     /** Total count of fragments in query for this node. */
-    private int totalFragmentsCnt;
+    @Order(6)
+    int totalFragmentsCnt;
 
     /** */
-    @GridDirectTransient
-    private Object[] params;
+    private @Nullable Object[] params;
 
     /** */
-    private byte[] paramsBytes;
+    @Order(7)
+    @Nullable byte[] paramsBytes;
 
     /** */
-    private long timeout;
+    @Order(8)
+    long timeout;
 
     /** */
-    @GridDirectCollection(QueryTxEntry.class)
-    private @Nullable Collection<QueryTxEntry> qryTxEntries;
+    @Order(9)
+    @Nullable Collection<QueryTxEntry> qryTxEntries;
 
     /** */
-    @GridDirectMap(keyType = String.class, valueType = String.class)
-    private Map<String, String> appAttrs;
+    @Order(10)
+    @Nullable Map<String, String> appAttrs;
 
     /** */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
@@ -87,10 +89,10 @@ public class QueryStartRequest implements MarshalableMessage, ExecutionContextAw
         AffinityTopologyVersion ver,
         FragmentDescription fragmentDesc,
         int totalFragmentsCnt,
-        Object[] params,
+        @Nullable Object[] params,
         @Nullable byte[] paramsBytes,
         long timeout,
-        Collection<QueryTxEntry> qryTxEntries,
+        @Nullable Collection<QueryTxEntry> qryTxEntries,
         @Nullable Map<String, String> appAttrs
     ) {
         this.qryId = qryId;
@@ -125,7 +127,7 @@ public class QueryStartRequest implements MarshalableMessage, ExecutionContextAw
     /**
      * @return Registered local query ID on originating node.
      */
-    public long originatingQryId() {
+    public long originatingQueryId() {
         return originatingQryId;
     }
 
@@ -166,7 +168,7 @@ public class QueryStartRequest implements MarshalableMessage, ExecutionContextAw
      * @return Query parameters.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public Object[] parameters() {
+    public @Nullable Object[] parameters() {
         return params;
     }
 
@@ -193,7 +195,7 @@ public class QueryStartRequest implements MarshalableMessage, ExecutionContextAw
     }
 
     /** */
-    public Map<String, String> appAttrs() {
+    public @Nullable Map<String, String> applicationAttributes() {
         return appAttrs;
     }
 
@@ -226,195 +228,7 @@ public class QueryStartRequest implements MarshalableMessage, ExecutionContextAw
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeMessage("fragmentDesc", fragmentDesc))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeLong("originatingQryId", originatingQryId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeByteArray("paramsBytes", paramsBytes))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeUuid("qryId", qryId))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeString("root", root))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeString("schema", schema))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeLong("timeout", timeout))
-                    return false;
-
-                writer.incrementState();
-
-            case 7:
-                if (!writer.writeInt("totalFragmentsCnt", totalFragmentsCnt))
-                    return false;
-
-                writer.incrementState();
-
-            case 8:
-                if (!writer.writeCollection("qryTxEntries", qryTxEntries, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 9:
-                if (!writer.writeAffinityTopologyVersion("ver", ver))
-                    return false;
-
-                writer.incrementState();
-
-            case 10:
-                if (!writer.writeMap("appAttrs", appAttrs, MessageCollectionItemType.STRING, MessageCollectionItemType.STRING))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                fragmentDesc = reader.readMessage("fragmentDesc");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                originatingQryId = reader.readLong("originatingQryId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                paramsBytes = reader.readByteArray("paramsBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                qryId = reader.readUuid("qryId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                root = reader.readString("root");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                schema = reader.readString("schema");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 6:
-                timeout = reader.readLong("timeout");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 7:
-                totalFragmentsCnt = reader.readInt("totalFragmentsCnt");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 8:
-                qryTxEntries = reader.readCollection("qryTxEntries", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 9:
-                ver = reader.readAffinityTopologyVersion("ver");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 10:
-                appAttrs = reader.readMap("appAttrs", MessageCollectionItemType.STRING, MessageCollectionItemType.STRING, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(QueryStartRequest.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public MessageType type() {
         return MessageType.QUERY_START_REQUEST;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 11;
     }
 }

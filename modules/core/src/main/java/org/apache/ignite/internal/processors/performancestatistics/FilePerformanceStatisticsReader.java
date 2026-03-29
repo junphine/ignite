@@ -49,6 +49,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.nio.ByteBuffer.allocateDirect;
 import static java.nio.ByteOrder.nativeOrder;
 import static java.nio.file.Files.walkFileTree;
+import static java.nio.file.StandardOpenOption.READ;
 import static org.apache.ignite.internal.processors.performancestatistics.OperationType.CACHE_START;
 import static org.apache.ignite.internal.processors.performancestatistics.OperationType.CHECKPOINT;
 import static org.apache.ignite.internal.processors.performancestatistics.OperationType.JOB;
@@ -153,7 +154,7 @@ public class FilePerformanceStatisticsReader {
 
             UUID nodeId = nodeId(file);
 
-            try (FileIO io = ioFactory.create(file)) {
+            try (FileIO io = ioFactory.create(file, READ)) {
                 fileIo = io;
                 boolean first = true;
 
@@ -307,10 +308,13 @@ public class FilePerformanceStatisticsReader {
             assert walkerName.str != null : "Views are written by single thread, no string cache misses are possible";
 
             try {
-                sysViewEntry = new SystemViewEntry(viewName.str, walkerName.str);
+                sysViewEntry = new SystemViewEntryImpl(viewName.str, walkerName.str);
+            }
+            catch (ClassNotFoundException e) {
+                sysViewEntry = new UnsupportedSystemViewEntry(viewName.str, walkerName.str);
             }
             catch (ReflectiveOperationException e) {
-                throw new IgniteException("Could not find walker: " + walkerName);
+                throw new IgniteException("Failed to instantiate " + walkerName.str + " walker for " + viewName.str + " system view.");
             }
 
             return true;
@@ -322,7 +326,7 @@ public class FilePerformanceStatisticsReader {
                 return false;
 
             for (PerformanceStatisticsHandler hnd : curHnd)
-                hnd.systemView(nodeId, sysViewEntry.viewName, sysViewEntry.schema, row);
+                hnd.systemView(nodeId, sysViewEntry.viewName(), sysViewEntry.schema(), row);
 
             return true;
         }
@@ -661,8 +665,26 @@ public class FilePerformanceStatisticsReader {
         }
     }
 
+    /** System view entry. */
+    private interface SystemViewEntry {
+        /**
+         * @return System view name.
+         */
+        String viewName();
+
+        /**
+         * @return System view schema.
+         */
+        List<String> schema();
+
+        /**
+         * @return System view row.
+         */
+        List<Object> nextRow();
+    }
+
     /** Reads views from buf. */
-    private class SystemViewEntry {
+    private class SystemViewEntryImpl implements SystemViewEntry {
         /** */
         private final String viewName;
 
@@ -679,7 +701,7 @@ public class FilePerformanceStatisticsReader {
          * @param viewName System view name.
          * @param walkerName Name of walker to visist system view attributes.
          */
-        public SystemViewEntry(String viewName, String walkerName) throws ReflectiveOperationException {
+        public SystemViewEntryImpl(String viewName, String walkerName) throws ReflectiveOperationException {
             walker = (SystemViewRowAttributeWalker<?>)Class.forName(walkerName).getConstructor().newInstance();
 
             this.viewName = viewName;
@@ -697,13 +719,56 @@ public class FilePerformanceStatisticsReader {
             rowVisitor = new RowReaderVisitor(schema.size());
         }
 
+        /** {@inheritDoc} */
+        @Override public String viewName() {
+            return viewName;
+        }
+
+        /** {@inheritDoc} */
+        @Override public List<String> schema() {
+            return schema;
+        }
+
         /**
          * @return System view row.
          */
-        public List<Object> nextRow() {
+        @Override public List<Object> nextRow() {
             rowVisitor.clear();
             walker.visitAll(rowVisitor);
             return rowVisitor.row();
+        }
+    }
+
+    /** System view entry for unsupported system view walker. */
+    private static class UnsupportedSystemViewEntry implements SystemViewEntry {
+        /** View name. */
+        private final String viewName;
+
+        /** Walker name. */
+        private final String walkerName;
+
+        /**
+         * @param viewName System view name.
+         * @param walkerName Name of walker to visist system view attributes.
+         */
+        public UnsupportedSystemViewEntry(String viewName, String walkerName) {
+            this.viewName = viewName;
+            this.walkerName = walkerName;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String viewName() {
+            return viewName;
+        }
+
+        /** {@inheritDoc} */
+        @Override public List<String> schema() {
+            throw new IgniteException(viewName + " system view with" + walkerName + " walker is not supported.");
+        }
+
+        /** {@inheritDoc} */
+        @Override public List<Object> nextRow() {
+            throw new IgniteException(viewName + " system view with" + walkerName + " walker is not supported.");
         }
     }
 

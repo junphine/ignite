@@ -17,29 +17,30 @@
 
 package org.apache.ignite.internal.processors.service;
 
-import java.nio.ByteBuffer;
+import java.io.Serializable;
 import java.util.Objects;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Service deployment process' identifier.
  */
-public class ServiceDeploymentProcessId implements Message {
+public class ServiceDeploymentProcessId implements Message, Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Topology version. */
-    @Nullable private AffinityTopologyVersion topVer;
+    @Order(0)
+    @Nullable AffinityTopologyVersion topVer;
 
     /** Request's id. */
-    @Nullable private IgniteUuid reqId;
+    @Order(1)
+    @Nullable IgniteUuid reqId;
 
     /**
      * Empty constructor for marshalling purposes.
@@ -64,86 +65,20 @@ public class ServiceDeploymentProcessId implements Message {
     /**
      * @return Topology version.
      */
-    public AffinityTopologyVersion topologyVersion() {
+    public @Nullable AffinityTopologyVersion topologyVersion() {
         return topVer;
     }
 
     /**
      * @return Requests id.
      */
-    public IgniteUuid requestId() {
+    public @Nullable IgniteUuid requestId() {
         return reqId;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeMessage("topVer", topVer))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeIgniteUuid("reqId", reqId))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                topVer = reader.readMessage("topVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                reqId = reader.readIgniteUuid("reqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-        }
-
-        return reader.afterMessageRead(ServiceDeploymentProcessId.class);
     }
 
     /** {@inheritDoc} */
     @Override public short directType() {
         return 167;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */

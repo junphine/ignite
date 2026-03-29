@@ -21,9 +21,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -36,7 +39,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * Ignite SQL call rewrite table. Performs unconditional rewrites for some predefined Calcite SQL operators,
  * which can't be extended other ways by Ignite.
  */
-public class IgniteSqlCallRewriteTable {
+public class IgniteSqlCallRewriteTable implements IgniteSqlNodeRewriter {
     /** Instance. */
     public static final IgniteSqlCallRewriteTable INSTANCE = new IgniteSqlCallRewriteTable();
 
@@ -53,6 +56,9 @@ public class IgniteSqlCallRewriteTable {
     private IgniteSqlCallRewriteTable() {
         register(SqlLibraryOperators.NVL.getName(), IgniteSqlCallRewriteTable::nvlRewriter);
         register(SqlLibraryOperators.DECODE.getName(), IgniteSqlCallRewriteTable::decodeRewriter);
+
+        // TODO Workaround for https://issues.apache.org/jira/browse/CALCITE-6978
+        register(SqlStdOperatorTable.COALESCE.getName(), IgniteSqlCallRewriteTable::coalesceRewriter);
     }
 
     /** Registers rewriter for SQL operator. */
@@ -60,11 +66,24 @@ public class IgniteSqlCallRewriteTable {
         map.put(operatorName, rewriter);
     }
 
+    /** {@inheritDoc} */
+    @Override public SqlNode rewrite(SqlValidator validator, SqlNode node) {
+        if (node instanceof SqlCall)
+            return rewrite(validator, (SqlCall)node);
+        else
+            return node;
+    }
+
     /** Rewrites SQL call. */
-    SqlCall rewrite(SqlValidator validator, SqlCall call) {
+    SqlNode rewrite(SqlValidator validator, SqlCall call) {
         BiFunction<SqlValidator, SqlCall, SqlCall> rewriter = map.get(call.getOperator().getName());
 
-        return rewriter == null ? call : rewriter.apply(validator, call);
+        return rewriter == null ? call.getOperator().rewriteCall(validator, call) : rewriter.apply(validator, call);
+    }
+
+    /** */
+    private static SqlCall coalesceRewriter(SqlValidator validator, SqlCall call) {
+        return containsSubquery(call) ? call : (SqlCall)call.getOperator().rewriteCall(validator, call);
     }
 
     /** Rewrites NVL call to CASE WHEN call. */
@@ -75,6 +94,10 @@ public class IgniteSqlCallRewriteTable {
 
         if (operands.size() == 2) {
             SqlParserPos pos = call.getParserPosition();
+
+            // Do not rewrite to CASE-WHEN calls that contain subqueries.
+            if (containsSubquery(call))
+                return new SqlBasicCall(SqlStdOperatorTable.COALESCE, operands, pos);
 
             SqlNodeList whenList = new SqlNodeList(pos);
             SqlNodeList thenList = new SqlNodeList(pos);
@@ -87,6 +110,11 @@ public class IgniteSqlCallRewriteTable {
         }
         else
             return call; // Operands count will be validated and exception will be thrown later.
+    }
+
+    /** */
+    public static boolean containsSubquery(SqlNode node) {
+        return SqlUtil.containsCall(node, call -> call.getKind() == SqlKind.SELECT);
     }
 
     /** Rewrites DECODE call to CASE WHEN call. */

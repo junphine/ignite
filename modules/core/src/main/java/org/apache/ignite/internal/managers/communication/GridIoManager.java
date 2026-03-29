@@ -99,12 +99,13 @@ import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccess
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.platform.message.PlatformMessageFilter;
 import org.apache.ignite.internal.processors.pool.PoolProcessor;
-import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
+import org.apache.ignite.internal.thread.IgniteThreadFactory;
+import org.apache.ignite.internal.thread.context.Scope;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
@@ -140,7 +141,6 @@ import org.apache.ignite.spi.communication.tcp.internal.CommunicationListenerEx;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionRequestor;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestDiscoveryMessage;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
-import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -236,7 +236,7 @@ import static org.jsr166.ConcurrentLinkedHashMap.QueuePolicy.PER_SEGMENT_Q_OPTIM
  * @see IgniteMessaging
  * @see TransmissionHandler
  */
-public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializable>> {
+public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Object>> {
     /** Io communication metrics registry name. */
     public static final String COMM_METRICS = metricName("io", "communication");
 
@@ -332,7 +332,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     private final ConcurrentMap<UUID, Deque<DelayedMessage>> waitMap = new ConcurrentHashMap<>();
 
     /** Communication message listener. */
-    private CommunicationListenerEx<Serializable> commLsnr;
+    private CommunicationListenerEx<Object> commLsnr;
 
     /** Grid marshaller. */
     private final Marshaller marsh;
@@ -376,7 +376,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /**
      * @param ctx Grid kernal context.
      */
-    @SuppressWarnings("deprecation")
     public GridIoManager(GridKernalContext ctx) {
         super(ctx, ctx.config().getCommunicationSpi());
 
@@ -434,14 +433,12 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         }
         else {
             formatter = new MessageFormatter() {
-                @Override public MessageWriter writer(UUID rmtNodeId) {
-                    assert rmtNodeId != null;
-
-                    return new DirectMessageWriter();
+                @Override public MessageWriter writer(MessageFactory msgFactory) {
+                    return new DirectMessageWriter(msgFactory, ctx.config().getNetworkCompressionLevel());
                 }
 
-                @Override public MessageReader reader(UUID rmtNodeId, MessageFactory msgFactory) {
-                    return new DirectMessageReader(msgFactory);
+                @Override public MessageReader reader(MessageFactory msgFactory) {
+                    return new DirectMessageReader(msgFactory, ctx.cacheObjects());
                 }
             };
         }
@@ -453,7 +450,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         List<MessageFactoryProvider> compMsgs = new ArrayList<>();
 
-        compMsgs.add(new GridIoMessageFactory());        
+        compMsgs.add(new GridIoMessageFactory(marsh, U.gridClassLoader()));
 
         for (IgniteComponentType compType : IgniteComponentType.values()) {
             MessageFactoryProvider f = compType.messageFactory();
@@ -467,7 +464,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         msgFactory = new IgniteMessageFactoryImpl(msgs);
 
-        CommunicationSpi<Serializable> spi = getSpi();
+        CommunicationSpi<Object> spi = getSpi();
 
         if ((CommunicationSpi<?>)spi instanceof TcpCommunicationSpi)
             getTcpCommunicationSpi().setConnectionRequestor(invConnHandler);
@@ -488,8 +485,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");
 
-        getSpi().setListener(commLsnr = new CommunicationListenerEx<Serializable>() {
-            @Override public void onMessage(UUID nodeId, Serializable msg, IgniteRunnable msgC) {
+        getSpi().setListener(commLsnr = new CommunicationListenerEx<Object>() {
+            @Override public void onMessage(UUID nodeId, Object msg, IgniteRunnable msgC) {
                 try {
                     onMessage0(nodeId, (GridIoMessage)msg, msgC);
                 }
@@ -505,7 +502,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     lsnr.onNodeDisconnected(nodeId);
             }
 
-            @Override public void onChannelOpened(UUID rmtNodeId, Serializable initMsg, Channel channel) {
+            @Override public void onChannelOpened(UUID rmtNodeId, Object initMsg, Channel channel) {
                 try {
                     onChannelOpened0(rmtNodeId, (GridIoMessage)initMsg, channel);
                 }
@@ -919,7 +916,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings({"SynchronizationOnLocalVariableOrMethodParameter"})
     @Override public void onKernalStart0() throws IgniteCheckedException {
         discoLsnr = new GridLocalEventListener() {
             @Override public void onEvent(Event evt) {
@@ -1204,13 +1200,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 return;
             }
 
-            if (initMsg.topic() == null) {
-                int topicOrd = initMsg.topicOrdinal();
-
-                initMsg.topic(topicOrd >= 0 ? GridTopic.fromOrdinal(topicOrd) :
-                    U.unmarshal(marsh, initMsg.topicBytes(), U.resolveClassLoader(ctx.config())));
-            }
-
             byte plc = initMsg.policy();
 
             pools.poolForPolicy(plc).execute(new Runnable() {
@@ -1249,13 +1238,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                         nodeId + ", msg=" + msg + ']');
 
                 return;
-            }
-
-            if (msg.topic() == null) {
-                int topicOrd = msg.topicOrdinal();
-
-                msg.topic(topicOrd >= 0 ? GridTopic.fromOrdinal(topicOrd) :
-                    U.unmarshal(marsh, msg.topicBytes(), U.resolveClassLoader(ctx.config())));
             }
 
             if (!started) {
@@ -1878,7 +1860,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         UUID newSecSubjId = secSubjId != null ? secSubjId : nodeId;
 
-        try (OperationSecurityContext s = ctx.security().withContext(newSecSubjId)) {
+        try (Scope ignored = ctx.security().withContext(newSecSubjId)) {
             lsnr.onMessage(nodeId, msg, plc);
         }
         finally {
@@ -1982,9 +1964,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         );
 
         try {
-            if (topicOrd < 0)
-                ioMsg.topicBytes(U.marshal(marsh, topic));
-
             return ((TcpCommunicationSpi)(CommunicationSpi)getSpi()).openChannel(node, ioMsg);
         }
         catch (IgniteSpiException e) {
@@ -2056,9 +2035,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     ackC.apply(null);
             }
             else {
-                if (topicOrd < 0)
-                    ioMsg.topicBytes(U.marshal(marsh, topic));
-
                 try {
                     if ((CommunicationSpi<?>)getSpi() instanceof TcpCommunicationSpi)
                         getTcpCommunicationSpi().sendMessage(node, ioMsg, ackC);
@@ -3646,7 +3622,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                 if (msgBody != null) {
                     if (predLsnr != null) {
-                        try (OperationSecurityContext s = ctx.security().withContext(initNodeId)) {
+                        try (Scope ignored = ctx.security().withContext(initNodeId)) {
                             if (!predLsnr.apply(nodeId, msgBody))
                                 removeMessageListener(TOPIC_COMM_USER, this);
                         }
@@ -3770,7 +3746,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         }
 
         /** {@inheritDoc} */
-        @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
         @Override public void onTimeout() {
             GridMessageListener lsnr = listenerGet0(topic);
 
@@ -4318,7 +4293,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         if (ctx.security().enabled()) {
             assert msg instanceof GridIoSecurityAwareMessage;
 
-            return ((GridIoSecurityAwareMessage)msg).secSubjId();
+            return ((GridIoSecurityAwareMessage)msg).securitySubjectId();
         }
 
         return null;

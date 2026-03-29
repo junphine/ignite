@@ -17,19 +17,6 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -55,14 +42,18 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridTopic.TOPIC_IGFS;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.IGFS_POOL;
-import static org.apache.ignite.internal.processors.igfs.IgfsFileAffinityRange.RANGE_STATUS_INITIAL;
-import static org.apache.ignite.internal.processors.igfs.IgfsFileAffinityRange.RANGE_STATUS_MOVED;
-import static org.apache.ignite.internal.processors.igfs.IgfsFileAffinityRange.RANGE_STATUS_MOVING;
+import static org.apache.ignite.internal.processors.igfs.IgfsFileAffinityRange.*;
 
 /**
  * IGFS fragmentizer manager.
@@ -123,7 +114,7 @@ public class IgfsFragmentizerManager extends IgfsManager {
 
         igfsCtx.kernalContext().io().addMessageListener(topic, fragmentizerWorker);
 
-        new IgniteThread(fragmentizerWorker).start();
+        new IgniteThread(igfsCtx.kernalContext().igniteInstanceName(),"IgfsFragmentizerManager",fragmentizerWorker).start();
     }
 
     /** {@inheritDoc} */
@@ -237,7 +228,7 @@ public class IgfsFragmentizerManager extends IgfsManager {
                         if (fragmentizerCrd == null && !stopping) {
                             fragmentizerCrd = new FragmentizerCoordinator();
 
-                            new IgniteThread(fragmentizerCrd).start();
+                            new IgniteThread(igfsCtx.kernalContext().igniteInstanceName(),"IgfsFragmentizerManager",fragmentizerCrd).start();
                         }
                     }
                 }

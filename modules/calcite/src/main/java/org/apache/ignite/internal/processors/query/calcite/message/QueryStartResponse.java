@@ -17,52 +17,44 @@
 
 package org.apache.ignite.internal.processors.query.calcite.message;
 
-import java.nio.ByteBuffer;
 import java.util.UUID;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridDirectTransient;
-import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.internal.Order;
+import org.apache.ignite.internal.managers.communication.ErrorMessage;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
  */
-public class QueryStartResponse implements MarshalableMessage {
+public class QueryStartResponse implements CalciteMessage {
     /** */
-    private UUID queryId;
+    @Order(0)
+    UUID qryId;
 
     /** */
-    private long fragmentId;
+    @Order(1)
+    long fragmentId;
 
     /** */
-    @GridDirectTransient
-    private Throwable error;
-
-    /** */
-    private byte[] errBytes;
+    @Order(2)
+    @Nullable ErrorMessage errMsg;
 
     /** */
     public QueryStartResponse() {}
 
     /** */
-    public QueryStartResponse(UUID queryId, long fragmentId) {
-        this(queryId, fragmentId, null);
-    }
-
-    /** */
-    public QueryStartResponse(UUID queryId, long fragmentId, Throwable error) {
-        this.queryId = queryId;
+    public QueryStartResponse(UUID qryId, long fragmentId, @Nullable Throwable error) {
+        this.qryId = qryId;
         this.fragmentId = fragmentId;
-        this.error = error;
+
+        if (error != null)
+            errMsg = new ErrorMessage(error);
     }
 
     /**
      * @return Query ID.
      */
     public UUID queryId() {
-        return queryId;
+        return qryId;
     }
 
     /**
@@ -75,101 +67,12 @@ public class QueryStartResponse implements MarshalableMessage {
     /**
      * @return Error.
      */
-    public Throwable error() {
-        return error;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void prepareMarshal(GridCacheSharedContext<?, ?> ctx) throws IgniteCheckedException {
-        if (error != null)
-            errBytes = U.marshal(ctx, error);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void prepareUnmarshal(GridCacheSharedContext<?, ?> ctx) throws IgniteCheckedException {
-        if (errBytes != null)
-            error = U.unmarshal(ctx, errBytes, U.resolveClassLoader(ctx.gridConfig()));
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeByteArray("errBytes", errBytes))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeLong("fragmentId", fragmentId))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeUuid("queryId", queryId))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                errBytes = reader.readByteArray("errBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                fragmentId = reader.readLong("fragmentId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                queryId = reader.readUuid("queryId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(QueryStartResponse.class);
+    public @Nullable Throwable error() {
+        return ErrorMessage.error(errMsg);
     }
 
     /** {@inheritDoc} */
     @Override public MessageType type() {
         return MessageType.QUERY_START_RESPONSE;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 3;
     }
 }

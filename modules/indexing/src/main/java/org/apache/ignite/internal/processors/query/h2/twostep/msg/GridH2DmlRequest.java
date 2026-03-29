@@ -16,14 +16,11 @@
  */
 package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.GridDirectCollection;
-import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -32,9 +29,6 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import static org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery.EMPTY_PARAMS;
 
@@ -42,57 +36,63 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuer
  * Request for DML operation on remote node.
  */
 public class GridH2DmlRequest implements Message, GridCacheQueryMarshallable {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Request id. */
     @GridToStringInclude
-    private long reqId;
+    @Order(0)
+    long reqId;
 
     /** Cache identifiers. */
     @GridToStringInclude
-    @GridDirectCollection(Integer.class)
-    private List<Integer> caches;
+    @Order(1)
+    List<Integer> caches;
 
     /** Topology version. */
     @GridToStringInclude
-    private AffinityTopologyVersion topVer;
+    @Order(2)
+    AffinityTopologyVersion topVer;
 
     /** Query partitions. */
     @GridToStringInclude
-    private int[] qryParts;
+    @Order(3)
+    int[] qryParts;
 
     /** Page size. */
-    private int pageSize;
+    @Order(4)
+    int pageSize;
 
     /** Query. */
     @GridToStringInclude
-    private String qry;
+    @Order(5)
+    String qry;
 
     /** Flags. */
-    private byte flags;
+    @Order(6)
+    byte flags;
 
     /** Timeout. */
-    private int timeout;
+    @Order(7)
+    int timeout;
 
     /** Query parameters. */
     @GridToStringInclude(sensitive = true)
-    @GridDirectTransient
     private Object[] params;
 
     /** Query parameters as bytes. */
-    private byte[] paramsBytes;
+    @Order(8)
+    byte[] paramsBytes;
 
     /** Schema name. */
     @GridToStringInclude
-    private String schemaName;
+    @Order(9)
+    String schemaName;
 
     /** Explicit timeout flag. */
     @GridToStringInclude
-    private boolean explicitTimeout;
+    @Order(10)
+    boolean explicitTimeout;
 
     /**
-     * Required by {@link Externalizable}
+     * Empty constructor.
      */
     public GridH2DmlRequest() {
         // No-op.
@@ -259,15 +259,6 @@ public class GridH2DmlRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /**
-     * Checks if data page scan enabled.
-     *
-     * @return {@code true} If data page scan enabled, {@code false} if not, and {@code null} if not set.
-     */
-    public Boolean isDataPageScanEnabled() {
-        return GridH2QueryRequest.isDataPageScanEnabled(flags);
-    }
-
-    /**
      * @return Timeout.
      */
     public int timeout() {
@@ -348,202 +339,8 @@ public class GridH2DmlRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeCollection("caches", caches, MessageCollectionItemType.INT))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeBoolean("explicitTimeout", explicitTimeout))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeByte("flags", flags))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeInt("pageSize", pageSize))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeByteArray("paramsBytes", paramsBytes))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeString("qry", qry))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeIntArray("qryParts", qryParts))
-                    return false;
-
-                writer.incrementState();
-
-            case 7:
-                if (!writer.writeLong("reqId", reqId))
-                    return false;
-
-                writer.incrementState();
-
-            case 8:
-                if (!writer.writeString("schemaName", schemaName))
-                    return false;
-
-                writer.incrementState();
-
-            case 9:
-                if (!writer.writeInt("timeout", timeout))
-                    return false;
-
-                writer.incrementState();
-
-            case 10:
-                if (!writer.writeMessage("topVer", topVer))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                caches = reader.readCollection("caches", MessageCollectionItemType.INT);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                explicitTimeout = reader.readBoolean("explicitTimeout");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                flags = reader.readByte("flags");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                pageSize = reader.readInt("pageSize");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                paramsBytes = reader.readByteArray("paramsBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                qry = reader.readString("qry");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 6:
-                qryParts = reader.readIntArray("qryParts");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 7:
-                reqId = reader.readLong("reqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 8:
-                schemaName = reader.readString("schemaName");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 9:
-                timeout = reader.readInt("timeout");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 10:
-                topVer = reader.readMessage("topVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridH2DmlRequest.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return -55;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 11;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */

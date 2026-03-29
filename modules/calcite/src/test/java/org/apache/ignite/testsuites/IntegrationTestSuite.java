@@ -18,15 +18,19 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.cache.DdlTransactionCalciteSelfTest;
+import org.apache.ignite.internal.processors.cache.QueryEntityValueColumnAliasTest;
 import org.apache.ignite.internal.processors.cache.SessionContextSqlFunctionTest;
+import org.apache.ignite.internal.processors.query.calcite.CalciteQueryProcessorPropertiesTest;
 import org.apache.ignite.internal.processors.query.calcite.CalciteQueryProcessorTest;
 import org.apache.ignite.internal.processors.query.calcite.CancelTest;
 import org.apache.ignite.internal.processors.query.calcite.IndexWithSameNameCalciteTest;
 import org.apache.ignite.internal.processors.query.calcite.SqlFieldsQueryUsageTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.AggregatesIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.AuthorizationIntegrationTest;
+import org.apache.ignite.internal.processors.query.calcite.integration.CacheStoreTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.CalciteBasicSecondaryIndexIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.CalciteErrorHandlilngIntegrationTest;
+import org.apache.ignite.internal.processors.query.calcite.integration.CalcitePlanningDumpTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.CorrelatesIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.DataTypesTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.DateTimeTest;
@@ -44,6 +48,7 @@ import org.apache.ignite.internal.processors.query.calcite.integration.IndexSpoo
 import org.apache.ignite.internal.processors.query.calcite.integration.IntervalTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.JoinIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.KeepBinaryIntegrationTest;
+import org.apache.ignite.internal.processors.query.calcite.integration.KeyClassChangeIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.KillCommandDdlIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.KillQueryCommandDdlIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.LimitOffsetIntegrationTest;
@@ -51,6 +56,7 @@ import org.apache.ignite.internal.processors.query.calcite.integration.LocalDate
 import org.apache.ignite.internal.processors.query.calcite.integration.LocalQueryIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.MemoryQuotasIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.MetadataIntegrationTest;
+import org.apache.ignite.internal.processors.query.calcite.integration.MultiDcQueryMappingTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.OperatorsExtensionIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.PartitionPruneTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.PartitionsReservationIntegrationTest;
@@ -71,19 +77,21 @@ import org.apache.ignite.internal.processors.query.calcite.integration.SystemVie
 import org.apache.ignite.internal.processors.query.calcite.integration.TableDdlIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.TableDmlIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.TimeoutIntegrationTest;
+import org.apache.ignite.internal.processors.query.calcite.integration.UnnestIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.UnstableTopologyIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.UserDdlIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.UserDefinedFunctionsIntegrationTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.UserDefinedFunctionsIntegrationTransactionalTest;
 import org.apache.ignite.internal.processors.query.calcite.integration.ViewsIntegrationTest;
-import org.apache.ignite.internal.processors.query.calcite.integration.tpch.TpchTest;
-import org.apache.ignite.internal.processors.query.calcite.jdbc.JdbcCrossEngineTest;
-import org.apache.ignite.internal.processors.query.calcite.jdbc.JdbcQueryTest;
+import org.apache.ignite.internal.processors.query.calcite.integration.tpch.TpchScale001Test;
+import org.apache.ignite.internal.processors.query.calcite.integration.tpch.TpchScale010Test;
+import org.apache.ignite.internal.processors.query.calcite.integration.tpch.TpchScale100Test;
 import org.apache.ignite.internal.processors.query.calcite.rules.JoinCommuteRulesTest;
 import org.apache.ignite.internal.processors.query.calcite.rules.JoinOrderOptimizationTest;
 import org.apache.ignite.internal.processors.query.calcite.rules.OrToUnionRuleTest;
 import org.apache.ignite.internal.processors.query.calcite.rules.ProjectScanMergeRuleTest;
 import org.apache.ignite.internal.processors.query.calcite.thin.MultiLineQueryTest;
+import org.apache.ignite.internal.processors.tx.TxWithExceptionalInterceptorTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -95,9 +103,8 @@ import org.junit.runners.Suite;
     OrToUnionRuleTest.class,
     ProjectScanMergeRuleTest.class,
     CalciteQueryProcessorTest.class,
+    CalciteQueryProcessorPropertiesTest.class,
     CalciteErrorHandlilngIntegrationTest.class,
-    JdbcQueryTest.class,
-    JdbcCrossEngineTest.class,
     CalciteBasicSecondaryIndexIntegrationTest.class,
     CancelTest.class,
     DateTimeTest.class,
@@ -158,7 +165,16 @@ import org.junit.runners.Suite;
     SqlPlanHistoryIntegrationTest.class,
     QueryBlockingTaskExecutorIntegrationTest.class,
     ScalarInIntegrationTest.class,
-    TpchTest.class,
+    TpchScale001Test.class,
+    TpchScale010Test.class,
+    TpchScale100Test.class,
+    UnnestIntegrationTest.class,
+    CalcitePlanningDumpTest.class,
+    KeyClassChangeIntegrationTest.class,
+    QueryEntityValueColumnAliasTest.class,
+    CacheStoreTest.class,
+    MultiDcQueryMappingTest.class,
+    TxWithExceptionalInterceptorTest.class
 })
 public class IntegrationTestSuite {
 }

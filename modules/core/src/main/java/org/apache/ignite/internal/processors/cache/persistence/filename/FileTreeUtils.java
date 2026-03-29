@@ -19,10 +19,18 @@ package org.apache.ignite.internal.processors.cache.persistence.filename;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 
 /**
  * Utility methods for {@link NodeFileTree}.
@@ -41,8 +49,8 @@ public class FileTreeUtils {
     public static void createCacheStorages(NodeFileTree ft, IgniteLogger log) throws IgniteCheckedException {
         createAndCheck(ft.nodeStorage(), "page store work directory", log);
 
-        for (Map.Entry<String, File> e : ft.dataRegionStorages().entrySet())
-            createAndCheck(e.getValue(), "page store work directory [dataRegion=" + e.getKey() + ']', log);
+        for (Map.Entry<String, File> e : ft.extraStorages().entrySet())
+            createAndCheck(e.getValue(), "page store work directory [storagePath=" + e.getKey() + ']', log);
     }
 
     /**
@@ -57,8 +65,42 @@ public class FileTreeUtils {
 
         removeTmpDir(tmpFt.root(), err, log);
 
-        for (File tmpDrStorage : tmpFt.dataRegionStorages().values())
+        for (File tmpDrStorage : tmpFt.extraStorages().values())
             removeTmpDir(tmpDrStorage.getParentFile(), err, log);
+    }
+
+    /**
+     * @param ccfg Cache configuration.
+     * @param part Partition.
+     * @return Storage path from config for partition.
+     */
+    public static @Nullable String partitionStorage(CacheConfiguration<?, ?> ccfg, int part) {
+        if (part == INDEX_PARTITION && !F.isEmpty(ccfg.getIndexPath()))
+            return ccfg.getIndexPath();
+
+        String[] csp = ccfg.getStoragePaths();
+
+        if (F.isEmpty(csp))
+            return null;
+
+        return resolveStorage(csp, part);
+    }
+
+    /**
+     * @param dsCfg Data storage configuration.
+     * @return All known storages.
+     * @throws IgniteCheckedException
+     */
+    public static Set<String> nodeStorages(DataStorageConfiguration dsCfg) throws IgniteCheckedException {
+        if (dsCfg == null)
+            throw new IgniteCheckedException("Data storage must be configured");
+
+        Set<String> nodeStorages = new HashSet<>(F.asList(dsCfg.getExtraStoragePaths()));
+
+        if (!F.isEmpty(dsCfg.getStoragePath()))
+            nodeStorages.add(dsCfg.getStoragePath());
+
+        return nodeStorages;
     }
 
     /**
@@ -99,5 +141,14 @@ public class FileTreeUtils {
                 "DataStorageConfiguration#storagePath, DataRegionConfiguration#storagePath properties). " +
                 "Current persistence store directory is: [" + dir.getAbsolutePath() + "]");
         }
+    }
+
+    /**
+     * @param storages Storages to select from.
+     * @param part Partition.
+     * @return Storage for partition.
+     */
+    static <T> T resolveStorage(T[] storages, int part) {
+        return storages[part % storages.length];
     }
 }

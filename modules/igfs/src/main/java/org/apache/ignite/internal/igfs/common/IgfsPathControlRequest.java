@@ -17,11 +17,12 @@
 
 package org.apache.ignite.internal.igfs.common;
 
-import java.util.Map;
 import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.internal.processors.igfs.IgfsUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Map;
 
 /**
  * Single path command message. This is a plain bean.

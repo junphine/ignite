@@ -17,30 +17,58 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.nio.ByteBuffer;
+import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.internal.Order;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.plugin.extensions.communication.MarshallableMessage;
 import org.jetbrains.annotations.Nullable;
 
-/**
- *
- */
-public abstract class CacheEntryPredicateAdapter implements CacheEntryPredicate {
+/** A unified container for common, typical cache entry predicates. */
+public class CacheEntryPredicateAdapter implements CacheEntryPredicate, MarshallableMessage {
     /** */
     private static final long serialVersionUID = 4647110502545358709L;
 
     /** */
+    public static final CacheEntryPredicateAdapter ALWAYS_FALSE = new CacheEntryPredicateAdapter(PredicateType.ALWAYS_FALSE);
+
+    /** */
     protected transient boolean locked;
 
-    /** {@inheritDoc} */
-    @Override public void finishUnmarshal(GridCacheContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-        // No-op.
+    /** */
+    @GridToStringInclude
+    private PredicateType type;
+
+    /** Type value serialization holder. */
+    @Order(0)
+    protected transient byte code;
+
+    /** */
+    @GridToStringInclude
+    @Order(1)
+    @Nullable CacheObject val;
+
+    /** */
+    public CacheEntryPredicateAdapter() {
+        type = PredicateType.OTHER;
     }
 
-    /** {@inheritDoc} */
-    @Override public void prepareMarshal(GridCacheContext ctx) throws IgniteCheckedException {
-        // No-op.
+    /** */
+    public CacheEntryPredicateAdapter(PredicateType type) {
+        assert type != null;
+
+        this.type = type;
+    }
+
+    /** */
+    public CacheEntryPredicateAdapter(@Nullable CacheObject val) {
+        type = PredicateType.VALUE;
+        code = 1;
+
+        this.val = val;
     }
 
     /** {@inheritDoc} */
@@ -50,50 +78,150 @@ public abstract class CacheEntryPredicateAdapter implements CacheEntryPredicate 
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        assert false : this;
-
-        return 0;
+        return 98;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 0;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        return reader.afterMessageRead(CacheEntryPredicateAdapter.class);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        return true;
+    /** */
+    public PredicateType type() {
+        return type;
     }
 
     /**
      * @param entry Entry.
      * @return Value.
      */
-    @Nullable protected CacheObject peekVisibleValue(GridCacheEntryEx entry) {
+    @Nullable private CacheObject peekVisibleValue(GridCacheEntryEx entry) {
         return locked ? entry.rawGet() : entry.peekVisibleValue();
     }
 
     /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
+    @Override public boolean apply(GridCacheEntryEx e) {
+        switch (type) {
+            case VALUE: {
+                CacheObject val = peekVisibleValue(e);
+
+                if (this.val == null && val == null)
+                    return true;
+
+                if (this.val == null || val == null)
+                    return false;
+
+                GridCacheContext<?, ?> cctx = e.context();
+
+                if (this.val instanceof BinaryObject && val instanceof BinaryObject)
+                    return Objects.equals(val, this.val);
+
+                Object thisVal = CU.value(this.val, cctx, false);
+                Object cacheVal = CU.value(val, cctx, false);
+
+                if (thisVal.getClass().isArray())
+                    return Objects.deepEquals(thisVal, cacheVal);
+
+                return Objects.equals(thisVal, cacheVal);
+            }
+
+            case HAS_VALUE:
+                return peekVisibleValue(e) != null;
+
+            case HAS_NO_VALUE:
+                return peekVisibleValue(e) == null;
+
+            case ALWAYS_FALSE:
+                return false;
+        }
+
+        throw new IllegalStateException("Unknown cache entry predicate type: " + type);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishUnmarshal(GridCacheContext ctx, ClassLoader ldr) throws IgniteCheckedException {
+        if (type == PredicateType.VALUE)
+            val.finishUnmarshal(ctx.cacheObjectContext(), ldr);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareMarshal(GridCacheContext ctx) throws IgniteCheckedException {
+        if (type == PredicateType.VALUE)
+            val.prepareMarshal(ctx.cacheObjectContext());
+    }
+
+    /** */
+    public byte code() {
+        return code;
+    }
+
+    /** */
+    public void code(byte code) {
+        this.code = code;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareMarshal(Marshaller marsh) throws IgniteCheckedException {
+        switch (type) {
+            case OTHER:
+                code = 0;
+                break;
+
+            case VALUE:
+                code = 1;
+                break;
+
+            case HAS_VALUE:
+                code = 2;
+                break;
+
+            case HAS_NO_VALUE:
+                code = 3;
+                break;
+
+            case ALWAYS_FALSE:
+                code = 4;
+                break;
+
+            default:
+                throw new IllegalArgumentException("Unknown cache entry predicate type: " + type);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishUnmarshal(Marshaller marsh, ClassLoader clsLdr) throws IgniteCheckedException {
+        switch (code) {
+            case 0:
+                type = PredicateType.OTHER;
+                break;
+
+            case 1:
+                type = PredicateType.VALUE;
+                break;
+
+            case 2:
+                type = PredicateType.HAS_VALUE;
+                break;
+
+            case 3:
+                type = PredicateType.HAS_NO_VALUE;
+                break;
+
+            case 4:
+                type = PredicateType.ALWAYS_FALSE;
+                break;
+
+            default:
+                throw new IllegalArgumentException("Unknown cache entry predicate type code: " + code);
+        }
+    }
+
+    /** Common predicate type. */
+    public enum PredicateType {
+        /** Other custom predicate. */
+        OTHER,
+        /** Entry has certain equal value. */
+        VALUE,
+        /** Entry has any value. */
+        HAS_VALUE,
+        /** Entry has no value. */
+        HAS_NO_VALUE,
+        /** Is always false. */
+        ALWAYS_FALSE
     }
 }

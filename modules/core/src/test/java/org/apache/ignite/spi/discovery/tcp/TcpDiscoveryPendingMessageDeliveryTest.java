@@ -18,18 +18,13 @@
 package org.apache.ignite.spi.discovery.tcp;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Set;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
-import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
-import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
@@ -102,6 +97,8 @@ public class TcpDiscoveryPendingMessageDeliveryTest extends GridCommonAbstractTe
 
         startGrid("listener");
 
+        awaitPartitionMapExchange();
+
         sentEnsuredMsgs.clear();
         receivedEnsuredMsgs.clear();
 
@@ -162,6 +159,8 @@ public class TcpDiscoveryPendingMessageDeliveryTest extends GridCommonAbstractTe
 
         startGrid("listener");
 
+        awaitPartitionMapExchange();
+
         sentEnsuredMsgs.clear();
         receivedEnsuredMsgs.clear();
 
@@ -209,6 +208,8 @@ public class TcpDiscoveryPendingMessageDeliveryTest extends GridCommonAbstractTe
         //Node which should received all fail message in any way.
         startGrid("listener");
 
+        awaitPartitionMapExchange();
+
         sentEnsuredMsgs.clear();
         receivedEnsuredMsgs.clear();
 
@@ -233,7 +234,7 @@ public class TcpDiscoveryPendingMessageDeliveryTest extends GridCommonAbstractTe
      * @param id Message id.
      */
     private void sendDummyCustomMessage(TcpDiscoverySpi disco, IgniteUuid id) {
-        disco.sendCustomEvent(new CustomMessageWrapper(new DummyCustomDiscoveryMessage(id)));
+        disco.sendCustomEvent(new DummyCustomDiscoveryMessage(id));
     }
 
     /**
@@ -252,29 +253,30 @@ public class TcpDiscoveryPendingMessageDeliveryTest extends GridCommonAbstractTe
      */
     private class DyingDiscoverySpi extends TcpDiscoverySpi {
         /** {@inheritDoc} */
-        @Override protected void writeToSocket(Socket sock, TcpDiscoveryAbstractMessage msg, byte[] data,
-            long timeout) throws IOException {
+        @Override protected void writeToSocket(
+            Socket sock,
+            TcpDiscoveryAbstractMessage msg,
+            byte[] data,
+            long timeout
+        ) throws IOException, IgniteCheckedException {
             if (!blockMsgs)
                 super.writeToSocket(sock, msg, data, timeout);
         }
 
         /** {@inheritDoc} */
-        @Override protected void writeToSocket(Socket sock, TcpDiscoveryAbstractMessage msg,
+        @Override protected void writeMessage(TcpDiscoveryIoSession ses, TcpDiscoveryAbstractMessage msg,
             long timeout) throws IOException, IgniteCheckedException {
             if (!blockMsgs)
-                super.writeToSocket(sock, msg, timeout);
+                super.writeMessage(ses, msg, timeout);
         }
 
         /** {@inheritDoc} */
-        @Override protected void writeToSocket(Socket sock, OutputStream out, TcpDiscoveryAbstractMessage msg,
-            long timeout) throws IOException, IgniteCheckedException {
-            if (!blockMsgs)
-                super.writeToSocket(sock, out, msg, timeout);
-        }
-
-        /** {@inheritDoc} */
-        @Override protected void writeToSocket(TcpDiscoveryAbstractMessage msg, Socket sock, int res,
-            long timeout) throws IOException {
+        @Override protected void writeToSocket(
+            TcpDiscoveryAbstractMessage msg,
+            Socket sock,
+            int res,
+            long timeout
+        ) throws IOException, IgniteCheckedException {
             if (!blockMsgs)
                 super.writeToSocket(msg, sock, res, timeout);
         }
@@ -314,17 +316,5 @@ public class TcpDiscoveryPendingMessageDeliveryTest extends GridCommonAbstractTe
         @Nullable @Override public DiscoveryCustomMessage ackMessage() {
             return null;
         }
-
-        /** {@inheritDoc} */
-        @Override public boolean isMutable() {
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public DiscoCache createDiscoCache(GridDiscoveryManager mgr, AffinityTopologyVersion topVer,
-            DiscoCache discoCache) {
-            throw new UnsupportedOperationException();
-        }
     }
 }
-

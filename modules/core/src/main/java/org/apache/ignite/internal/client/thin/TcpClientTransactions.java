@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.ClientTransaction;
 import org.apache.ignite.client.ClientTransactions;
 import org.apache.ignite.configuration.ClientTransactionConfiguration;
@@ -38,7 +39,7 @@ import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.TRAN
  */
 class TcpClientTransactions implements ClientTransactions {
     /** Channel. */
-    private final ReliableChannel ch;
+    private final ReliableChannelEx ch;
 
     /** Marshaller. */
     private final ClientBinaryMarshaller marsh;
@@ -56,7 +57,7 @@ class TcpClientTransactions implements ClientTransactions {
     private final ClientTransactionConfiguration txCfg;
 
     /** Constructor. */
-    TcpClientTransactions(ReliableChannel ch, ClientBinaryMarshaller marsh, ClientTransactionConfiguration txCfg) {
+    TcpClientTransactions(ReliableChannelEx ch, ClientBinaryMarshaller marsh, ClientTransactionConfiguration txCfg) {
         this.ch = ch;
         this.marsh = marsh;
         this.txCfg = txCfg;
@@ -95,8 +96,9 @@ class TcpClientTransactions implements ClientTransactions {
                 ProtocolContext protocolCtx = req.clientChannel().protocolCtx();
 
                 if (!protocolCtx.isFeatureSupported(TRANSACTIONS)) {
-                    throw new ClientProtocolError(String.format("Transactions are not supported by the server's " +
-                        "protocol version %s, required version %s", protocolCtx.version(), TRANSACTIONS.verIntroduced()));
+                    throw new ClientFeatureNotSupportedByServerException(String.format(
+                        "Transactions are not supported by the server's protocol version %s, required version %s",
+                        protocolCtx.version(), TRANSACTIONS.verIntroduced()));
                 }
 
                 try (BinaryWriterEx writer = BinaryUtils.writer(marsh.context(), req.out(), null)) {
@@ -106,7 +108,12 @@ class TcpClientTransactions implements ClientTransactions {
                     writer.writeString(lb);
                 }
             },
-            res -> new TcpClientTransaction(res.in().readInt(), res.clientChannel())
+            res -> new TcpClientTransaction(
+                res.in().readInt(),
+                res.clientChannel(),
+                concurrency == null ? txCfg.getDefaultTxConcurrency() : concurrency,
+                isolation == null ? txCfg.getDefaultTxIsolation() : isolation
+            )
         );
 
         threadLocTxUid.set(tx0.txUid);
@@ -193,6 +200,12 @@ class TcpClientTransactions implements ClientTransactions {
         /** Client channel. */
         private final ClientChannel clientCh;
 
+        /** */
+        private final TransactionConcurrency concurrency;
+
+        /** */
+        private final TransactionIsolation isolation;
+
         /** Transaction is closed. */
         private volatile boolean closed;
 
@@ -200,10 +213,17 @@ class TcpClientTransactions implements ClientTransactions {
          * @param id Transaction ID.
          * @param clientCh Client channel.
          */
-        private TcpClientTransaction(int id, ClientChannel clientCh) {
+        private TcpClientTransaction(
+            int id,
+            ClientChannel clientCh,
+            TransactionConcurrency concurrency,
+            TransactionIsolation isolation
+        ) {
             txUid = txCnt.incrementAndGet();
             txId = id;
             this.clientCh = clientCh;
+            this.concurrency = concurrency;
+            this.isolation = isolation;
         }
 
         /** {@inheritDoc} */
@@ -279,6 +299,16 @@ class TcpClientTransactions implements ClientTransactions {
          */
         boolean isClosed() {
             return closed;
+        }
+
+        /** */
+        public TransactionConcurrency concurrency() {
+            return concurrency;
+        }
+
+        /** */
+        public TransactionIsolation isolation() {
+            return isolation;
         }
     }
 }

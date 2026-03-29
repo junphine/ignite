@@ -17,21 +17,17 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,14 +35,12 @@ import org.jetbrains.annotations.Nullable;
  *
  */
 public class GridNearAtomicSingleUpdateFilterRequest extends GridNearAtomicSingleUpdateRequest {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Filter. */
-    private CacheEntryPredicate[] filter;
+    @Order(0)
+    CacheEntryPredicate[] filter;
 
     /**
-     * Empty constructor required by {@link Externalizable}.
+     * Empty constructor.
      */
     public GridNearAtomicSingleUpdateFilterRequest() {
         // No-op.
@@ -64,7 +58,6 @@ public class GridNearAtomicSingleUpdateFilterRequest extends GridNearAtomicSingl
      * @param filter Optional filter for atomic check.
      * @param taskNameHash Task name hash code.
      * @param flags Flags.
-     * @param addDepInfo Deployment info flag.
      */
     GridNearAtomicSingleUpdateFilterRequest(
         int cacheId,
@@ -75,8 +68,7 @@ public class GridNearAtomicSingleUpdateFilterRequest extends GridNearAtomicSingl
         GridCacheOperation op,
         @Nullable CacheEntryPredicate[] filter,
         int taskNameHash,
-        byte flags,
-        boolean addDepInfo
+        short flags
     ) {
         super(
             cacheId,
@@ -86,8 +78,7 @@ public class GridNearAtomicSingleUpdateFilterRequest extends GridNearAtomicSingl
             syncMode,
             op,
             taskNameHash,
-            flags,
-            addDepInfo
+            flags
         );
 
         assert filter != null && filter.length > 0;
@@ -137,63 +128,8 @@ public class GridNearAtomicSingleUpdateFilterRequest extends GridNearAtomicSingl
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 12:
-                if (!writer.writeObjectArray("filter", filter, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 12:
-                filter = reader.readObjectArray("filter", MessageCollectionItemType.MSG, CacheEntryPredicate.class);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridNearAtomicSingleUpdateFilterRequest.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 127;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 13;
     }
 
     /** {@inheritDoc} */

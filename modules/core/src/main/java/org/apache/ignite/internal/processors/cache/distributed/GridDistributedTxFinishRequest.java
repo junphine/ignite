@@ -17,12 +17,10 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxState;
@@ -30,8 +28,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxStateAwa
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,9 +37,6 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
  * Transaction completion message.
  */
 public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage implements IgniteTxStateAware {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** */
     protected static final int WAIT_REMOTE_TX_FLAG_MASK = 0x01;
 
@@ -63,50 +56,54 @@ public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage i
     protected static final int STORE_ENABLED_FLAG_MASK = 0x20;
 
     /** Topology version. */
-    private AffinityTopologyVersion topVer;
+    @Order(0)
+    public AffinityTopologyVersion topVer;
 
     /** Future ID. */
-    private IgniteUuid futId;
+    @Order(1)
+    public IgniteUuid futId;
 
     /** Thread ID. */
-    private long threadId;
+    @Order(2)
+    public long threadId;
 
     /** Commit version. */
-    private GridCacheVersion commitVer;
+    @Order(3)
+    public GridCacheVersion commitVer;
 
     /** Invalidate flag. */
-    private boolean invalidate;
+    @Order(4)
+    public boolean invalidate;
 
     /** Commit flag. */
-    private boolean commit;
+    @Order(5)
+    public boolean commit;
 
     /** Min version used as base for completed versions. */
-    private GridCacheVersion baseVer;
-
-    /** Expected txSize. */
-    private int txSize;
-
-    /** System transaction flag. */
-    private boolean sys;
+    @Order(6)
+    public GridCacheVersion baseVer;
 
     /** IO policy. */
-    private byte plc;
+    @Order(7)
+    public byte plc;
 
     /** Task name hash. */
-    private int taskNameHash;
+    @Order(8)
+    public int taskNameHash;
 
     /** */
-    private byte flags;
+    @Order(9)
+    public byte flags;
 
     /** Write synchronization mode. */
-    private CacheWriteSynchronizationMode syncMode;
+    @Order(10)
+    public CacheWriteSynchronizationMode syncMode;
 
     /** Transient TX state. */
-    @GridDirectTransient
     private IgniteTxState txState;
 
     /**
-     * Empty constructor required by {@link Externalizable}.
+     * Empty constructor.
      */
     public GridDistributedTxFinishRequest() {
         /* No-op. */
@@ -119,14 +116,11 @@ public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage i
      * @param commitVer Commit version.
      * @param commit Commit flag.
      * @param invalidate Invalidate flag.
-     * @param sys System transaction flag.
      * @param plc IO policy.
      * @param syncMode Write synchronization mode.
      * @param baseVer Base version.
      * @param committedVers Committed versions.
      * @param rolledbackVers Rolled back versions.
-     * @param txSize Expected transaction size.
-     * @param addDepInfo Deployment info flag.
      */
     public GridDistributedTxFinishRequest(
         GridCacheVersion xidVer,
@@ -136,17 +130,14 @@ public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage i
         long threadId,
         boolean commit,
         boolean invalidate,
-        boolean sys,
         byte plc,
         CacheWriteSynchronizationMode syncMode,
         GridCacheVersion baseVer,
         Collection<GridCacheVersion> committedVers,
         Collection<GridCacheVersion> rolledbackVers,
-        int taskNameHash,
-        int txSize,
-        boolean addDepInfo
+        int taskNameHash
     ) {
-        super(xidVer, 0, addDepInfo);
+        super(xidVer, 0, false);
 
         assert xidVer != null;
         assert syncMode != null;
@@ -157,20 +148,18 @@ public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage i
         this.threadId = threadId;
         this.commit = commit;
         this.invalidate = invalidate;
-        this.sys = sys;
         this.plc = plc;
         this.syncMode = syncMode;
         this.baseVer = baseVer;
         this.taskNameHash = taskNameHash;
-        this.txSize = txSize;
 
         completedVersions(committedVers, rolledbackVers);
     }
 
     /**
-     * @return Transaction write synchronization mode (can be null is message sent from old nodes).
+     * @return Transaction write synchronization mode.
      */
-    public final CacheWriteSynchronizationMode syncMode() {
+    @Nullable public final CacheWriteSynchronizationMode syncMode() {
         return syncMode;
     }
 
@@ -195,24 +184,10 @@ public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage i
     }
 
     /**
-     * @return Task name hash.
-     */
-    public final int taskNameHash() {
-        return taskNameHash;
-    }
-
-    /**
      * @return Topology version.
      */
     @Override public final AffinityTopologyVersion topologyVersion() {
         return topVer;
-    }
-
-    /**
-     * @return System transaction flag.
-     */
-    public boolean system() {
-        return sys;
     }
 
     /**
@@ -266,13 +241,6 @@ public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage i
     }
 
     /**
-     * @return Expected tx size.
-     */
-    public int txSize() {
-        return txSize;
-    }
-
-    /**
      *
      * @return {@code True} if reply is required.
      */
@@ -298,235 +266,8 @@ public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage i
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 8:
-                if (!writer.writeMessage("baseVer", baseVer))
-                    return false;
-
-                writer.incrementState();
-
-            case 9:
-                if (!writer.writeBoolean("commit", commit))
-                    return false;
-
-                writer.incrementState();
-
-            case 10:
-                if (!writer.writeMessage("commitVer", commitVer))
-                    return false;
-
-                writer.incrementState();
-
-            case 11:
-                if (!writer.writeByte("flags", flags))
-                    return false;
-
-                writer.incrementState();
-
-            case 12:
-                if (!writer.writeIgniteUuid("futId", futId))
-                    return false;
-
-                writer.incrementState();
-
-            case 13:
-                if (!writer.writeBoolean("invalidate", invalidate))
-                    return false;
-
-                writer.incrementState();
-
-            case 14:
-                if (!writer.writeByte("plc", plc))
-                    return false;
-
-                writer.incrementState();
-
-            case 15:
-                if (!writer.writeByte("syncMode", syncMode != null ? (byte)syncMode.ordinal() : -1))
-                    return false;
-
-                writer.incrementState();
-
-            case 16:
-                if (!writer.writeBoolean("sys", sys))
-                    return false;
-
-                writer.incrementState();
-
-            case 17:
-                if (!writer.writeInt("taskNameHash", taskNameHash))
-                    return false;
-
-                writer.incrementState();
-
-            case 18:
-                if (!writer.writeLong("threadId", threadId))
-                    return false;
-
-                writer.incrementState();
-
-            case 19:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
-                    return false;
-
-                writer.incrementState();
-
-            case 20:
-                if (!writer.writeInt("txSize", txSize))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 8:
-                baseVer = reader.readMessage("baseVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 9:
-                commit = reader.readBoolean("commit");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 10:
-                commitVer = reader.readMessage("commitVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 11:
-                flags = reader.readByte("flags");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 12:
-                futId = reader.readIgniteUuid("futId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 13:
-                invalidate = reader.readBoolean("invalidate");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 14:
-                plc = reader.readByte("plc");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 15:
-                byte syncModeOrd;
-
-                syncModeOrd = reader.readByte("syncMode");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                syncMode = CacheWriteSynchronizationMode.fromOrdinal(syncModeOrd);
-
-                reader.incrementState();
-
-            case 16:
-                sys = reader.readBoolean("sys");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 17:
-                taskNameHash = reader.readInt("taskNameHash");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 18:
-                threadId = reader.readLong("threadId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 19:
-                topVer = reader.readAffinityTopologyVersion("topVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 20:
-                txSize = reader.readInt("txSize");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridDistributedTxFinishRequest.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 23;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 21;
     }
 
     /** {@inheritDoc} */

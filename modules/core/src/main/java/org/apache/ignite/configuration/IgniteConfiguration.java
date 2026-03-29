@@ -246,11 +246,11 @@ public class IgniteConfiguration {
 
     /** Default failure detection timeout in millis. */
     @SuppressWarnings("UnnecessaryBoxing")
-    public static final Long DFLT_FAILURE_DETECTION_TIMEOUT = new Long(10_000);
+    public static final Long DFLT_FAILURE_DETECTION_TIMEOUT = Long.valueOf(10_000);
 
     /** Default failure detection timeout for client nodes in millis. */
     @SuppressWarnings("UnnecessaryBoxing")
-    public static final Long DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT = new Long(30_000);
+    public static final Long DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT = Long.valueOf(30_000);
 
     /** Default policy for node shutdown. */
     public static final ShutdownPolicy DFLT_SHUTDOWN_POLICY = ShutdownPolicy.IMMEDIATE;
@@ -2157,7 +2157,10 @@ public class IgniteConfiguration {
      * {@link LocalDeploymentSpi} will be used.
      *
      * @return Grid deployment SPI implementation or {@code null} to use default implementation.
+     * @deprecated Will be replaced with the
+     * <a href="https://cwiki.apache.org/confluence/display/IGNITE/IEP-144+IgniteClassPath">IgniteClassPath</a> in the next versions.
      */
+    @Deprecated
     public DeploymentSpi getDeploymentSpi() {
         return deploySpi;
     }
@@ -2168,7 +2171,10 @@ public class IgniteConfiguration {
      * @param deploySpi Fully configured instance of {@link DeploymentSpi}.
      * @see IgniteConfiguration#getDeploymentSpi()
      * @return {@code this} for chaining.
+     * @deprecated Will be replaced with the
+     * <a href="https://cwiki.apache.org/confluence/display/IGNITE/IEP-144+IgniteClassPath">IgniteClassPath</a> in the next versions.
      */
+    @Deprecated
     public IgniteConfiguration setDeploymentSpi(DeploymentSpi deploySpi) {
         this.deploySpi = deploySpi;
 
@@ -2501,7 +2507,10 @@ public class IgniteConfiguration {
      *
      * @param deployMode Task classes and resources sharing mode.
      * @return {@code this} for chaining.
+     * @deprecated Will be replaced with the
+     * <a href="https://cwiki.apache.org/confluence/display/IGNITE/IEP-144+IgniteClassPath">IgniteClassPath</a> in the next versions.
      */
+    @Deprecated
     public IgniteConfiguration setDeploymentMode(DeploymentMode deployMode) {
         this.deployMode = deployMode;
 
@@ -2513,7 +2522,10 @@ public class IgniteConfiguration {
      * Refer to {@link DeploymentMode} documentation for more information.
      *
      * @return Deployment mode.
+     * @deprecated Will be replaced with the
+     * <a href="https://cwiki.apache.org/confluence/display/IGNITE/IEP-144+IgniteClassPath">IgniteClassPath</a> in the next versions.
      */
+    @Deprecated
     public DeploymentMode getDeploymentMode() {
         return deployMode;
     }

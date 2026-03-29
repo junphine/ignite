@@ -17,7 +17,6 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.io.IOException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteFileSystem;
@@ -28,14 +27,17 @@ import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.igfs.mapreduce.IgfsFileRange;
 import org.apache.ignite.igfs.mapreduce.IgfsJob;
 import org.apache.ignite.igfs.mapreduce.IgfsRecordResolver;
-import org.apache.ignite.internal.GridInternalWrapper;
+
+import org.apache.ignite.internal.IgniteInternalWrapper;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
+
+import java.io.IOException;
 
 /**
  * IGFS job implementation.
  */
-public class IgfsJobImpl implements ComputeJob, GridInternalWrapper<IgfsJob> {
+public class IgfsJobImpl implements ComputeJob, IgniteInternalWrapper<IgfsJob> {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -117,7 +119,8 @@ public class IgfsJobImpl implements ComputeJob, GridInternalWrapper<IgfsJob> {
     }
 
     /** {@inheritDoc} */
-    @Override public IgfsJob userObject() {
+    @Override
+    public IgfsJob delegate() {
         return job;
     }
 }

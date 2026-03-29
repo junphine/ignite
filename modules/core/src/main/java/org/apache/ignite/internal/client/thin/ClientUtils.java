@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -46,19 +47,26 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.client.ClientAffinityConfiguration;
 import org.apache.ignite.client.ClientCacheConfiguration;
+import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryReaderEx;
-import org.apache.ignite.internal.binary.BinarySchema;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.BinaryWriterEx;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature.CACHE_AFFINITY_CFG;
+import static org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature.CACHE_STORAGES;
+import static org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature.QRY_INITIATOR_ID;
+import static org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature.QRY_PARTITIONS_BATCH_SIZE;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.EXPIRY_POLICY;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.QUERY_ENTITY_PRECISION_AND_SCALE;
 import static org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy.convertDuration;
@@ -172,15 +180,15 @@ public final class ClientUtils {
 
             Map<String, Integer> enumValues = isEnum ? ClientUtils.map(in, unsed -> reader.readString(), unsed2 -> reader.readInt()) : null;
 
-            Collection<BinarySchema> schemas = ClientUtils.collection(
+            Collection<T2<Integer, List<Integer>>> schemas = ClientUtils.collection(
                 in,
-                unused -> new BinarySchema(
+                unused -> new T2<>(
                     reader.readInt(),
                     new ArrayList<>(ClientUtils.collection(in, unused2 -> reader.readInt()))
                 )
             );
 
-            return new BinaryMetadata(
+            return BinaryUtils.binaryMetadata(
                 typeId,
                 typeName,
                 fields,
@@ -222,13 +230,13 @@ public final class ClientUtils {
                 );
 
             collection(
-                meta.schemas(),
+                BinaryUtils.schemasAndFieldsIds(meta),
                 out,
                 (unused, s) -> {
-                    w.writeInt(s.schemaId());
+                    w.writeInt(s.get1());
 
                     collection(
-                        Arrays.stream(s.fieldIds()).boxed().collect(Collectors.toList()),
+                        Arrays.stream(s.get2()).boxed().collect(Collectors.toList()),
                         out,
                         (unused2, i) -> w.writeInt(i)
                     );
@@ -238,8 +246,11 @@ public final class ClientUtils {
     }
 
     /** Serialize configuration to stream. */
-    void cacheConfiguration(ClientCacheConfiguration cfg, BinaryOutputStream out, ProtocolContext protocolCtx) {
+    void cacheConfiguration(ClientCacheConfiguration cfg, boolean sql, BinaryOutputStream out, ProtocolContext protocolCtx) {
         try (BinaryWriterEx writer = BinaryUtils.writer(marsh.context(), out, null)) {
+            if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.SQL_CACHE_CREATION))
+                out.writeBoolean(sql);
+
             int origPos = out.position();
 
             writer.writeInt(0); // configuration length is to be assigned in the end
@@ -361,9 +372,26 @@ public final class ClientUtils {
                 });
             }
             else if (cfg.getExpiryPolicy() != null) {
-                throw new ClientProtocolError(String.format("Expire policies are not supported by the server " +
-                    "version %s, required version %s", protocolCtx.version(), EXPIRY_POLICY.verIntroduced()));
+                throw new ClientFeatureNotSupportedByServerException(String.format(
+                    "Expire policies are not supported by the server version %s, required version %s",
+                    protocolCtx.version(), EXPIRY_POLICY.verIntroduced()));
             }
+
+            if (protocolCtx.isFeatureSupported(CACHE_STORAGES)) {
+                itemWriter.accept(CfgItem.STORAGE_PATH, w -> w.writeStringArray(cfg.getStoragePaths()));
+                itemWriter.accept(CfgItem.IDX_PATH, w -> w.writeString(cfg.getIndexPath()));
+            }
+            else if (!F.isEmpty(cfg.getStoragePaths()) || !F.isEmpty(cfg.getIndexPath()))
+                throw new ClientFeatureNotSupportedByServerException("Cache storages are not supported by the server");
+
+            if (protocolCtx.isFeatureSupported(CACHE_AFFINITY_CFG) && cfg.getAffinityConfiguration() != null) {
+                itemWriter.accept(CfgItem.AFFINITY_CFG, w -> {
+                    w.writeInt(cfg.getAffinityConfiguration().getPartitions());
+                    w.writeBoolean(cfg.getAffinityConfiguration().isExcludeNeighbors());
+                });
+            }
+            else if (cfg.getAffinityConfiguration() != null)
+                throw new ClientProtocolError("Affinity configuration by thin client is not supported by the server");
 
             writer.writeInt(origPos, out.position() - origPos - 4); // configuration length
             writer.writeInt(origPos + 4, propCnt.get()); // properties count
@@ -495,12 +523,29 @@ public final class ClientUtils {
                 .setExpiryPolicy(!protocolCtx.isFeatureSupported(EXPIRY_POLICY) ?
                         null : reader.readBoolean() ?
                         new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong()) : null
-                );
+                )
+                .setStoragePaths(!protocolCtx.isFeatureSupported(CACHE_STORAGES)
+                    ? null
+                    : reader.readStringArray())
+                .setIndexPath(!protocolCtx.isFeatureSupported(CACHE_STORAGES)
+                    ? null
+                    : reader.readString())
+                .setAffinityConfiguration(!protocolCtx.isFeatureSupported(CACHE_AFFINITY_CFG) ? null
+                    : affinityConfiguration(reader));
         }
     }
 
+    /** Deserialize affinity configuration from stream. */
+    private ClientAffinityConfiguration affinityConfiguration(BinaryReaderEx reader) {
+        int parts = reader.readInt();
+        boolean exclNeighbors = reader.readBoolean();
+
+        return parts > 0 ? new ClientAffinityConfiguration().setPartitions(parts).setExcludeNeighbors(exclNeighbors)
+            : null;
+    }
+
     /** Serialize SQL field query to stream. */
-    void write(SqlFieldsQuery qry, BinaryOutputStream out) {
+    void write(SqlFieldsQuery qry, BinaryOutputStream out, ProtocolContext protocolCtx) {
         writeObject(out, qry.getSchema());
         out.writeInt(qry.getPageSize());
         out.writeInt(-1); // do not limit
@@ -516,16 +561,21 @@ public final class ClientUtils {
         out.writeLong(qry.getTimeout());
         out.writeBoolean(true); // include column names
 
-        if (qry.getPartitions() != null) {
-            out.writeInt(qry.getPartitions().length);
+        if (protocolCtx.isFeatureSupported(QRY_PARTITIONS_BATCH_SIZE)) {
+            if (qry.getPartitions() != null) {
+                out.writeInt(qry.getPartitions().length);
 
-            for (int part : qry.getPartitions())
-                out.writeInt(part);
+                for (int part : qry.getPartitions())
+                    out.writeInt(part);
+            }
+            else
+                out.writeInt(-1);
+
+            out.writeInt(qry.getUpdateBatchSize());
         }
-        else
-            out.writeInt(-1);
 
-        out.writeInt(qry.getUpdateBatchSize());
+        if (protocolCtx.isFeatureSupported(QRY_INITIATOR_ID))
+            writeObject(out, qry.getQueryInitiatorId());
     }
 
     /** Write Ignite binary object to output stream. */
@@ -764,7 +814,16 @@ public final class ClientUtils {
         QUERY_ENTITIES(200),
 
         /** Expire policy. */
-        EXPIRE_POLICY(407);
+        EXPIRE_POLICY(407),
+
+        /** Storage path. */
+        STORAGE_PATH(408),
+
+        /** Index path. */
+        IDX_PATH(409),
+
+        /** Affinity configuration. */
+        AFFINITY_CFG(410);
 
         /** Code. */
         private final short code;

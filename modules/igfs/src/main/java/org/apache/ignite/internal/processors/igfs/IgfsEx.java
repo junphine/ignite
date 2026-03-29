@@ -17,13 +17,14 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
-import java.net.URI;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteFileSystem;
 import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.igfs.secondary.IgfsSecondaryFileSystem;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
+
+import java.net.URI;
 
 /**
  * Internal API extension for {@link org.apache.ignite.IgniteFileSystem}.

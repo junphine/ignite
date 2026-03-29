@@ -17,31 +17,30 @@
 
 package org.apache.ignite.internal.processors.service;
 
-import java.nio.ByteBuffer;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.NotNull;
-
-import static org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType.BYTE_ARR;
 
 /**
  * Service single node deployment result.
  * <p/>
  * Contains count of deployed service instances on single node and deployment errors if exist.
  */
-public class ServiceSingleNodeDeploymentResult implements Message {
+public class ServiceSingleNodeDeploymentResult implements Message, Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Count of service's instances. */
-    private int cnt;
+    @Order(0)
+    int cnt;
 
     /** Serialized exceptions. */
-    private Collection<byte[]> errors;
+    @Order(1)
+    Collection<byte[]> errors;
 
     /**
      * Empty constructor for marshalling purposes.
@@ -64,13 +63,6 @@ public class ServiceSingleNodeDeploymentResult implements Message {
     }
 
     /**
-     * @param cnt Count of service's instances.
-     */
-    public void count(int cnt) {
-        this.cnt = cnt;
-    }
-
-    /**
      * @return Serialized exceptions.
      */
     @NotNull public Collection<byte[]> errors() {
@@ -85,74 +77,8 @@ public class ServiceSingleNodeDeploymentResult implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("cnt", cnt))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeCollection("errors", errors, BYTE_ARR))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                cnt = reader.readInt("cnt");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                errors = reader.readCollection("errors", BYTE_ARR);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-        }
-
-        return reader.afterMessageRead(ServiceSingleNodeDeploymentResult.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 169;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */

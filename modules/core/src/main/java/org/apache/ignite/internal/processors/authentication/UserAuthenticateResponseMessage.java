@@ -17,25 +17,22 @@
 
 package org.apache.ignite.internal.processors.authentication;
 
-import java.nio.ByteBuffer;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Is sent from coordinator node to client to deliver the results of the user authentication.
  */
 public class UserAuthenticateResponseMessage implements Message {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Request ID. */
-    private IgniteUuid id;
+    @Order(0)
+    IgniteUuid id;
 
     /** Error message. */
-    private String errMsg;
+    @Order(1)
+    String errMsg;
 
     /**
      *
@@ -75,76 +72,8 @@ public class UserAuthenticateResponseMessage implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeString("errMsg", errMsg))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeIgniteUuid("id", id))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                errMsg = reader.readString("errMsg");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                id = reader.readIgniteUuid("id");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(UserAuthenticateResponseMessage.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 132;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 2;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op
     }
 
     /** {@inheritDoc} */

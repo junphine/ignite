@@ -17,11 +17,10 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 
-import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
@@ -29,35 +28,33 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Response to remote DML request.
  */
 public class GridH2DmlResponse implements Message, GridCacheQueryMarshallable {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** Request id. */
     @GridToStringInclude
-    private long reqId;
+    @Order(0)
+    long reqId;
 
     /** Number of updated rows. */
     @GridToStringInclude
-    private long updCnt;
+    @Order(1)
+    long updCnt;
 
     /** Error message. */
     @GridToStringInclude
-    private String err;
+    @Order(2)
+    String err;
 
     /** Keys that failed. */
     @GridToStringInclude
-    @GridDirectTransient
-    private Object[] errKeys;
+    Object[] errKeys;
 
     /** Keys that failed (after marshalling). */
-    private byte[] errKeysBytes;
+    @Order(3)
+    byte[] errKeysBytes;
 
     /**
      * Default constructor.
@@ -78,7 +75,7 @@ public class GridH2DmlResponse implements Message, GridCacheQueryMarshallable {
         this.reqId = reqId;
         this.updCnt = updCnt;
         this.errKeys = errKeys;
-        this.err = error;
+        err = error;
     }
 
     /**
@@ -140,104 +137,9 @@ public class GridH2DmlResponse implements Message, GridCacheQueryMarshallable {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeString("err", err))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeByteArray("errKeysBytes", errKeysBytes))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeLong("reqId", reqId))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeLong("updCnt", updCnt))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                err = reader.readString("err");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                errKeysBytes = reader.readByteArray("errKeysBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                reqId = reader.readLong("reqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                updCnt = reader.readLong("updCnt");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridH2DmlResponse.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return -56;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 4;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op
-    }
 }
 

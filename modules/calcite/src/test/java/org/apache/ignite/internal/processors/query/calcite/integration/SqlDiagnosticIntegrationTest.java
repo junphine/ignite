@@ -36,7 +36,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
@@ -53,6 +55,7 @@ import org.apache.ignite.events.CacheQueryReadEvent;
 import org.apache.ignite.events.SqlQueryExecutionEvent;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.metric.MetricRegistryImpl;
 import org.apache.ignite.internal.processors.performancestatistics.AbstractPerformanceStatisticsTest;
@@ -61,16 +64,20 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.calcite.Query;
 import org.apache.ignite.internal.processors.query.calcite.QueryRegistry;
+import org.apache.ignite.internal.processors.query.calcite.RootQuery;
 import org.apache.ignite.internal.processors.query.calcite.exec.task.AbstractQueryTaskExecutor;
 import org.apache.ignite.internal.processors.query.calcite.exec.task.QueryBlockingTaskExecutor;
 import org.apache.ignite.internal.processors.query.calcite.exec.task.StripedQueryTaskExecutor;
 import org.apache.ignite.internal.processors.query.running.GridRunningQueryInfo;
-import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.processors.query.running.HeavyQueriesTracker;
+import org.apache.ignite.internal.util.GridTestClockTimer;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.metric.MetricRegistry;
 import org.apache.ignite.spi.metric.LongMetric;
+import org.apache.ignite.spi.systemview.view.SqlQueryHistoryView;
+import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -81,8 +88,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_I
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_OBJECT_READ;
 import static org.apache.ignite.events.EventType.EVT_SQL_QUERY_EXECUTION;
-import static org.apache.ignite.internal.processors.authentication.AuthenticationProcessorSelfTest.authenticate;
-import static org.apache.ignite.internal.processors.authentication.AuthenticationProcessorSelfTest.withSecurityContextOnAllNodes;
 import static org.apache.ignite.internal.processors.authentication.User.DFAULT_USER_NAME;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
@@ -95,7 +100,10 @@ import static org.apache.ignite.internal.processors.query.running.HeavyQueriesTr
 import static org.apache.ignite.internal.processors.query.running.HeavyQueriesTracker.LONG_QUERY_ERROR_MSG;
 import static org.apache.ignite.internal.processors.query.running.HeavyQueriesTracker.LONG_QUERY_EXEC_MSG;
 import static org.apache.ignite.internal.processors.query.running.HeavyQueriesTracker.LONG_QUERY_FINISHED_MSG;
+import static org.apache.ignite.internal.processors.query.running.RunningQueryManager.SQL_QRY_HIST_VIEW;
 import static org.apache.ignite.internal.processors.query.running.RunningQueryManager.SQL_USER_QUERIES_REG_NAME;
+import static org.apache.ignite.internal.util.lang.GridFunc.first;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Test SQL diagnostic tools.
@@ -115,9 +123,6 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
 
     /** */
     private ListeningTestLogger log;
-
-    /** */
-    private SecurityContext secCtxDflt;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -153,8 +158,6 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
         client = startClientGrid();
 
         client.cluster().state(ClusterState.ACTIVE);
-
-        secCtxDflt = authenticate(grid(0), DFAULT_USER_NAME, "ignite");
     }
 
     /** {@inheritDoc} */
@@ -212,8 +215,6 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
     /** */
     @Test
     public void testBatchParserMetrics() throws Exception {
-        withSecurityContextOnAllNodes(secCtxDflt);
-
         MetricRegistryImpl mreg0 = grid(0).context().metric().registry(QUERY_PARSER_METRIC_GROUP_NAME);
         MetricRegistryImpl mreg1 = grid(1).context().metric().registry(QUERY_PARSER_METRIC_GROUP_NAME);
         mreg0.reset();
@@ -324,7 +325,7 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
 
     /** */
     @Test
-    public void testThreadPoolMetrics() {
+    public void testThreadPoolMetrics() throws Exception {
         String regName = metricName(PoolProcessor.THREAD_POOLS, AbstractQueryTaskExecutor.THREAD_POOL_NAME);
         MetricRegistry mreg = client.context().metric().registry(regName);
 
@@ -336,7 +337,7 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
 
         sql("SELECT 'test'");
 
-        assertTrue(tasksCnt.value() > 0);
+        assertTrue(waitForCondition(() -> tasksCnt.value() > 0, 1000));
     }
 
     /** */
@@ -633,8 +634,6 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
     /** */
     @Test
     public void testSensitiveInformationHiding() throws Exception {
-        withSecurityContextOnAllNodes(secCtxDflt);
-
         cleanPerformanceStatisticsDir();
         startCollectStatistics();
 
@@ -686,8 +685,8 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
             sql(grid(0), "CREATE TABLE test_sens1 (val) WITH CACHE_NAME=\"test_sens1\" AS SELECT 'sensitive' AS val");
 
             // Test CREATE/ALTER USER commands rewrite.
-            sql(grid(0), "CREATE USER test WITH PASSWORD 'sensitive'");
-            sql(grid(0), "ALTER USER test WITH PASSWORD 'sensitive'");
+            sqlAsRoot(grid(0), "CREATE USER test WITH PASSWORD 'sensitive'");
+            sqlAsRoot(grid(0), "ALTER USER test WITH PASSWORD 'sensitive'");
 
             // Test JOIN.
             sql(grid(0),
@@ -781,6 +780,72 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
         }
 
         assertTrue(logLsnr2.check(1000L));
+
+        assertTrue(isHeavyQueriesTrackerEmpty());
+    }
+
+    /**
+     * Verifies that once the query is fully fetched, it is no longer tracked and its information encapsulated in a
+     * {@link RootQuery} instance is removed from {@link HeavyQueriesTracker}.
+     */
+    @Test
+    public void testEmptyHeavyQueriesTrackerWithFullyFetchedIterator() throws IgniteInterruptedCheckedException {
+        Iterator<?> it = runNotFullyFetchedQuery(false).iterator();
+
+        assertFalse(isHeavyQueriesTrackerEmpty());
+
+        it.forEachRemaining(x -> {});
+
+        assertTrue(waitForCondition(this::isHeavyQueriesTrackerEmpty, 1_000));
+    }
+
+    /**
+     * Verifies that once the cursor of a not fully fetched query is closed, it is no longer tracked and its information
+     * encapsulated in a {@link RootQuery} instance is removed from {@link HeavyQueriesTracker}.
+     */
+    @Test
+    public void testEmptyHeavyQueriesTrackerWithClosedCursor() throws IgniteInterruptedCheckedException {
+        FieldsQueryCursor<List<?>> cursor = runNotFullyFetchedQuery(false);
+
+        assertFalse(isHeavyQueriesTrackerEmpty());
+
+        cursor.close();
+
+        assertTrue(waitForCondition(this::isHeavyQueriesTrackerEmpty, 1_000));
+    }
+
+    /**
+     * Verifies that once a not fully fetched query is cancelled, it is no longer tracked and its information
+     * encapsulated in a {@link RootQuery} instance is removed from {@link HeavyQueriesTracker}.
+     */
+    @Test
+    public void testEmptyHeavyQueriesTrackerWithCancelledQuery() throws IgniteInterruptedCheckedException {
+        runNotFullyFetchedQuery(false);
+
+        assertFalse(isHeavyQueriesTrackerEmpty());
+
+        RootQuery<?> rootQry = (RootQuery<?>)heavyQueriesTracker().getQueries().iterator().next();
+
+        grid(0).context().query().cancelQuery(rootQry.localQueryId(), rootQry.initiatorNodeId(), false);
+
+        assertTrue(waitForCondition(this::isHeavyQueriesTrackerEmpty, 1_000));
+    }
+
+    /**
+     * Verifies that once a not fully fetched local query is cancelled, it is no longer tracked and its information
+     * encapsulated in a {@link RootQuery} instance is removed from {@link HeavyQueriesTracker}.
+     */
+    @Test
+    public void testEmptyHeavyQueriesTrackerWithCancelledLocalQuery() throws IgniteInterruptedCheckedException {
+        runNotFullyFetchedQuery(true);
+
+        assertFalse(isHeavyQueriesTrackerEmpty());
+
+        RootQuery<?> rootQry = (RootQuery<?>)heavyQueriesTracker().getQueries().iterator().next();
+
+        grid(0).context().query().cancelLocalQueries(Set.of(rootQry.localQueryId()));
+
+        assertTrue(waitForCondition(this::isHeavyQueriesTrackerEmpty, 1_000));
     }
 
     /** */
@@ -925,6 +990,122 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
         }
     }
 
+    /** Verifies that user-defined query initiator ID is present in the SQL_QUERY_HISTORY system view and logs. */
+    @Test
+    public void testSqlFieldsQueryWithInitiatorId() throws Exception {
+        IgniteEx grid = grid(0);
+
+        IgniteCache<Long, Long> cache = prepareTestCache(grid);
+
+        for (String testId : new String[] {"testId0", "testId1"}) {
+            cache.query(new SqlFieldsQuery("select * from test").setQueryInitiatorId(testId)).getAll();
+
+            assertTrue(waitForCondition(() -> {
+                SystemView<SqlQueryHistoryView> history = grid.context().systemView().view(SQL_QRY_HIST_VIEW);
+
+                assertNotNull(history);
+
+                if (history.size() != 1)
+                    return false;
+
+                SqlQueryHistoryView view = first(history);
+
+                assertNotNull(view);
+
+                return testId.equals(view.initiatorId());
+            }, 3_000));
+        }
+
+        String initiatorId = "testId2";
+
+        LogListener logLsnr = LogListener.matches(LONG_QUERY_FINISHED_MSG)
+            .andMatches("initiatorId=" + initiatorId).build();
+
+        log.registerListener(logLsnr);
+
+        cache.query(new SqlFieldsQuery("SELECT sleep(?)").setArgs(LONG_QRY_TIMEOUT + 1).setQueryInitiatorId(initiatorId))
+            .getAll();
+
+        assertTrue(logLsnr.check(1000));
+    }
+
+    /**
+     * Verifies that query total execution time is correctly accumulated in the DURATION_TOTAL field of the
+     * SQL_QUERIES_HISTORY system view.
+     */
+    @Test
+    public void testSqlQueryTotalDuration() throws Exception {
+        IgniteEx grid = grid(0);
+
+        IgniteCache<Long, Long> cache = prepareTestCache(grid);
+
+        AtomicLong curTotalTime = new AtomicLong();
+
+        int sleepTime = 500;
+
+        for (int i = 0; i < 2; i++) {
+            cache.query(new SqlFieldsQuery("SELECT sleep(?)").setArgs(sleepTime)).getAll();
+
+            assertTrue(waitForCondition(() -> {
+                SystemView<SqlQueryHistoryView> history = grid.context().systemView().view(SQL_QRY_HIST_VIEW);
+
+                assertNotNull(history);
+
+                if (history.size() != 1)
+                    return false;
+
+                SqlQueryHistoryView view = first(grid.context().systemView().view(SQL_QRY_HIST_VIEW));
+
+                assertNotNull(view);
+
+                long totalTime = view.durationTotal();
+
+                if (totalTime >= curTotalTime.get() + sleepTime) {
+                    curTotalTime.set(totalTime);
+
+                    return true;
+                }
+
+                return false;
+            }, 5_000));
+        }
+    }
+
+    /** */
+    private FieldsQueryCursor<List<?>> runNotFullyFetchedQuery(boolean loc) {
+        IgniteCache<Long, Long> cache = prepareTestCache(grid(0));
+
+        return cache.query(new SqlFieldsQuery("select * from test").setLocal(loc).setPageSize(1));
+    }
+
+    /** */
+    private HeavyQueriesTracker heavyQueriesTracker() {
+        return grid(0).context().query().runningQueryManager().heavyQueriesTracker();
+    }
+
+    /** */
+    private boolean isHeavyQueriesTrackerEmpty() {
+        return heavyQueriesTracker().getQueries().isEmpty();
+    }
+
+    /** */
+    private static IgniteCache<Long, Long> prepareTestCache(IgniteEx grid) {
+        IgniteCache<Long, Long> cache = grid.createCache(new CacheConfiguration<Long, Long>()
+            .setName("test")
+            .setSqlFunctionClasses(FunctionsLibrary.class)
+            .setQueryEntities(Collections.singleton(new QueryEntity(Long.class, Long.class)
+                .setTableName("test")
+                .addQueryField("id", Long.class.getName(), null)
+                .addQueryField("val", Long.class.getName(), null)
+                .setKeyFieldName("id")
+                .setValueFieldName("val"))));
+
+        for (long i = 0; i < 10; ++i)
+            cache.put(i, i);
+
+        return cache;
+    }
+
     /** */
     public static class FunctionsLibrary {
         /** */
@@ -940,6 +1121,16 @@ public class SqlDiagnosticIntegrationTest extends AbstractBasicIntegrationTest {
             catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+
+            return true;
+        }
+
+        /** */
+        @QuerySqlFunction
+        public static boolean sleep(int sleep) {
+            doSleep(sleep);
+
+            GridTestClockTimer.update();
 
             return true;
         }

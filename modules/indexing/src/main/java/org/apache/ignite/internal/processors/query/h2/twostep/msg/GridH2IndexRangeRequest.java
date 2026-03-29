@@ -17,40 +17,39 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
-import org.apache.ignite.internal.GridDirectCollection;
-import org.apache.ignite.internal.IgniteCodeGeneratingFail;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
  * Range request.
  */
-@IgniteCodeGeneratingFail
 public class GridH2IndexRangeRequest implements Message {
     /** */
-    private UUID originNodeId;
+    @Order(0)
+    UUID originNodeId;
 
     /** */
-    private long qryId;
+    @Order(1)
+    long qryId;
 
     /** */
-    private int originSegmentId;
+    @Order(2)
+    int originSegmentId;
 
     /** */
-    private int segmentId;
+    @Order(3)
+    int segmentId;
 
     /** */
-    private int batchLookupId;
+    @Order(4)
+    int batchLookupId;
 
     /** */
-    @GridDirectCollection(Message.class)
-    private List<GridH2RowRangeBounds> bounds;
+    @Order(5)
+    List<GridH2RowRangeBounds> bounds;
 
     /**
      * @param bounds Range bounds list.
@@ -119,7 +118,7 @@ public class GridH2IndexRangeRequest implements Message {
      * @param segmentId Origin index segment ID.
      */
     public void originSegmentId(int segmentId) {
-        this.originSegmentId = segmentId;
+        originSegmentId = segmentId;
     }
 
     /**
@@ -137,130 +136,8 @@ public class GridH2IndexRangeRequest implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeInt("batchLookupId", batchLookupId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeCollection("bounds", bounds, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeUuid("originNodeId", originNodeId))
-                    return false;
-
-                writer.incrementState();
-
-            case 3:
-                if (!writer.writeLong("qryId", qryId))
-                    return false;
-
-                writer.incrementState();
-
-            case 4:
-                if (!writer.writeInt("segmentId", segmentId))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeInt("originSegId", originSegmentId))
-                    return false;
-
-                writer.incrementState();
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                batchLookupId = reader.readInt("batchLookupId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                bounds = reader.readCollection("bounds", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                originNodeId = reader.readUuid("originNodeId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 3:
-                qryId = reader.readLong("qryId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                segmentId = reader.readInt("segmentId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                originSegmentId = reader.readInt("originSegId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-        }
-
-        return reader.afterMessageRead(GridH2IndexRangeRequest.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return -30;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 6;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
     }
 
     /** {@inheritDoc} */

@@ -17,11 +17,9 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
-import java.io.Externalizable;
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockResponse;
@@ -29,45 +27,49 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Near cache lock response.
  */
+@SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
 public class GridNearLockResponse extends GridDistributedLockResponse {
-    /** */
-    private static final long serialVersionUID = 0L;
-
-    /** Collection of versions that are pending and less than lock version. */
+    /** Pending versions that are less than {@link #version()}. */
     @GridToStringInclude
-    @GridDirectCollection(GridCacheVersion.class)
-    private Collection<GridCacheVersion> pending;
+    @Order(0)
+    Collection<GridCacheVersion> pending;
 
-    /** */
-    private int miniId;
+    /** Mini future ID. */
+    @Order(1)
+    int miniId;
 
     /** DHT versions. */
     @GridToStringInclude
-    private GridCacheVersion[] dhtVers;
+    @Order(2)
+    GridCacheVersion[] dhtVers;
 
     /** DHT candidate versions. */
     @GridToStringInclude
-    private GridCacheVersion[] mappedVers;
+    @Order(3)
+    GridCacheVersion[] mappedVers;
 
     /** Filter evaluation results for fast-commit transactions. */
-    private boolean[] filterRes;
+    @Order(4)
+    boolean[] filterRes;
 
-    /** Set if client node should remap lock request. */
-    private AffinityTopologyVersion clientRemapVer;
-
-    /** {@code True} if remap version is compatible with current version. Used together with clientRemapVer. */
-    private boolean compatibleRemapVer;
+    /** Topology version, which is set when client node should remap lock request. */
+    @Order(5)
+    AffinityTopologyVersion clientRemapVer;
 
     /**
-     * Empty constructor (required by {@link Externalizable}).
+     * Flag, indicating whether remap version is compatible with current version.
+     * Used together with clientRemapVer.
+     */
+    @Order(6)
+    boolean compatibleRemapVer;
+
+    /**
+     * Empty constructor.
      */
     public GridNearLockResponse() {
         // No-op.
@@ -83,7 +85,6 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
      * @param err Error.
      * @param clientRemapVer {@code True} if client node should remap lock request. If {@code compatibleRemapVer} is
      * {@code true} when first request is not remapped, but all subsequent will use remap version.
-     * @param addDepInfo Deployment info.
      * @param compatibleRemapVer {@code True} if remap version is compatible with lock version.
      */
     public GridNearLockResponse(
@@ -95,10 +96,9 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
         int cnt,
         Throwable err,
         AffinityTopologyVersion clientRemapVer,
-        boolean addDepInfo,
         boolean compatibleRemapVer
     ) {
-        super(cacheId, lockVer, futId, cnt, err, addDepInfo);
+        super(cacheId, lockVer, futId, cnt, err);
 
         assert miniId != 0;
 
@@ -114,41 +114,31 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
         this.compatibleRemapVer = compatibleRemapVer;
     }
 
-    /**
-     * @return {@code True} if client node should remap lock request.
-     */
+    /** @return Topology version, which is set when client node should remap lock request. */
     @Nullable public AffinityTopologyVersion clientRemapVersion() {
         return clientRemapVer;
     }
 
-    /**
-     * @return {@code True} is remap version is compatible with current topology version.
-     */
+    /** @return Flag, indicating whether remap version is compatible with current version. */
     public boolean compatibleRemapVersion() {
         return compatibleRemapVer;
     }
 
     /**
-     * Gets pending versions that are less than {@link #version()}.
-     *
-     * @return Pending versions.
+     * @return Pending versions that are less than {@link #version()}.
      */
     public Collection<GridCacheVersion> pending() {
         return pending;
     }
 
     /**
-     * Sets pending versions that are less than {@link #version()}.
-     *
-     * @param pending Pending versions.
+     * @param pending New pending versions that are less than {@link #version()}.
      */
     public void pending(Collection<GridCacheVersion> pending) {
         this.pending = pending;
     }
 
-    /**
-     * @return Mini future ID.
-     */
+    /** @return Mini future ID. */
     public int miniId() {
         return miniId;
     }
@@ -209,147 +199,8 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!super.writeTo(buf, writer))
-            return false;
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 11:
-                if (!writer.writeAffinityTopologyVersion("clientRemapVer", clientRemapVer))
-                    return false;
-
-                writer.incrementState();
-
-            case 12:
-                if (!writer.writeBoolean("compatibleRemapVer", compatibleRemapVer))
-                    return false;
-
-                writer.incrementState();
-
-            case 13:
-                if (!writer.writeObjectArray("dhtVers", dhtVers, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 14:
-                if (!writer.writeBooleanArray("filterRes", filterRes))
-                    return false;
-
-                writer.incrementState();
-
-            case 15:
-                if (!writer.writeObjectArray("mappedVers", mappedVers, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 16:
-                if (!writer.writeInt("miniId", miniId))
-                    return false;
-
-                writer.incrementState();
-
-            case 17:
-                if (!writer.writeCollection("pending", pending, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        if (!super.readFrom(buf, reader))
-            return false;
-
-        switch (reader.state()) {
-            case 11:
-                clientRemapVer = reader.readAffinityTopologyVersion("clientRemapVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 12:
-                compatibleRemapVer = reader.readBoolean("compatibleRemapVer");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 13:
-                dhtVers = reader.readObjectArray("dhtVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 14:
-                filterRes = reader.readBooleanArray("filterRes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 15:
-                mappedVers = reader.readObjectArray("mappedVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 16:
-                miniId = reader.readInt("miniId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 17:
-                pending = reader.readCollection("pending", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(GridNearLockResponse.class);
-    }
-
-    /** {@inheritDoc} */
     @Override public short directType() {
         return 52;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 18;
     }
 
     /** {@inheritDoc} */
