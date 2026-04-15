@@ -564,10 +564,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return -33;
-    }
 
     /** {@inheritDoc} */
     @Override public String toString() {

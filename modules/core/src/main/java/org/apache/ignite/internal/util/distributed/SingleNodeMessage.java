@@ -20,9 +20,9 @@ package org.apache.ignite.internal.util.distributed;
 import java.util.UUID;
 import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.communication.ErrorMessage;
-import org.apache.ignite.internal.managers.communication.GridIoMessageFactory;
 import org.apache.ignite.internal.util.distributed.DistributedProcess.DistributedProcessType;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -34,9 +34,6 @@ import org.jetbrains.annotations.Nullable;
  * @see InitMessage
  */
 public class SingleNodeMessage<R extends Message> implements Message {
-    /** Initial channel message type (value is {@code 176}). */
-    public static final short TYPE_CODE = 176;
-
     /** Process id. */
     @Order(0)
     UUID processId;
@@ -53,7 +50,7 @@ public class SingleNodeMessage<R extends Message> implements Message {
     @Order(3)
     @Nullable ErrorMessage errMsg;
 
-    /** Default constructor for {@link GridIoMessageFactory}. */
+    /** Default constructor for {@link MessageFactory}. */
     public SingleNodeMessage() {
         // No-op.
     }
@@ -71,11 +68,6 @@ public class SingleNodeMessage<R extends Message> implements Message {
 
         if (err != null)
             errMsg = new ErrorMessage(err);
-    }
-
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return TYPE_CODE;
     }
 
     /** @return Process id. */

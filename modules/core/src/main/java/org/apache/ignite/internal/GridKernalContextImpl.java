@@ -116,6 +116,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.plugin.PluginProvider;
+import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteComponentType.SPRING;
@@ -382,16 +383,13 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     private Thread.UncaughtExceptionHandler hnd;
 
     /** */
-    private IgniteEx grid;
+    private IgniteKernal grid;
 
     /** */
     private IgniteConfiguration cfg;
 
     /** */
     private GridKernalGateway gw;
-
-    /** Network segmented flag. */
-    private volatile boolean segFlag;
 
     /** Performance suggestions. */
     private final GridPerformanceSuggestions perf = new GridPerformanceSuggestions();
@@ -441,7 +439,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     @SuppressWarnings("TypeMayBeWeakened")
     protected GridKernalContextImpl(
         GridLoggerProxy log,
-        IgniteEx grid,
+        IgniteKernal grid,
         IgniteConfiguration cfg,
         GridKernalGateway gw,
         List<PluginProvider> plugins,
@@ -641,7 +639,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** {@inheritDoc} */
     @Override public boolean isStopping() {
-        return ((IgniteKernal)grid).isStopping();
+        return grid.isStopping();
     }
 
     /** */
@@ -717,6 +715,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public MaintenanceRegistry maintenanceRegistry() {
         return maintenanceProc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public MessageFactory messageFactory() {
+        return grid.messageFactory();
     }
 
     /** {@inheritDoc} */

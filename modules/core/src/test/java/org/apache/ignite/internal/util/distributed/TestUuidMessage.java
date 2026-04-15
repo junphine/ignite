@@ -20,7 +20,6 @@ package org.apache.ignite.internal.util.distributed;
 import java.util.UUID;
 import org.apache.ignite.internal.Order;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 
 /** */
 public class TestUuidMessage implements Message {
@@ -43,8 +42,4 @@ public class TestUuidMessage implements Message {
         return val;
     }
 
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return 10_001;
-    }
 }

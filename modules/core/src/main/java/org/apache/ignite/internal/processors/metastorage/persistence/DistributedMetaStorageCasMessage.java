@@ -20,8 +20,8 @@ package org.apache.ignite.internal.processors.metastorage.persistence;
 import java.util.UUID;
 import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
-import org.apache.ignite.internal.managers.discovery.DiscoveryMessageFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
 
 /** */
@@ -37,7 +37,7 @@ public class DistributedMetaStorageCasMessage extends DistributedMetaStorageUpda
     @Order(1)
     boolean matches;
 
-    /** Empty constructor for {@link DiscoveryMessageFactory}. */
+    /** Empty constructor for {@link MessageFactory}. */
     public DistributedMetaStorageCasMessage() {
         // No-op.
     }
@@ -70,10 +70,6 @@ public class DistributedMetaStorageCasMessage extends DistributedMetaStorageUpda
         return new DistributedMetaStorageCasAckMessage(requestId(), matches);
     }
 
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return 26;
-    }
 
     /** {@inheritDoc} */
     @Override public String toString() {
