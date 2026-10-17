@@ -431,7 +431,7 @@ public class GremlinExecutor implements AutoCloseable {
      * @throws IOException If failed to parse REST result.
      * @throws Throwable If failed to send request.
      */
-    public RestResult execRequest(Ignite ignite, IgniteVertxPlugin vertxPlugin, String clusterId, JsonObject params) throws Throwable {
+    public RestResult execRequest(Ignite ignite, IgniteVertxPlugin vertxPlugin, String reqId, JsonObject params) throws Throwable {
     	String code = params.getString("qry");
         try {
         	JsonObject res = new JsonObject();
@@ -448,7 +448,7 @@ public class GremlinExecutor implements AutoCloseable {
             long end = System.currentTimeMillis();
         	data.put("duration", end-start);
         	res.put("result", data);
-        	res.put("id", "~"+clusterId);
+        	res.put("id", "~"+reqId);
     		res.put("finished",true);
     		return RestResult.success(res.toString(), params.getString("sessionToken"));
         }

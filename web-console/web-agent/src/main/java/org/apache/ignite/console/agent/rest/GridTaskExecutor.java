@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -250,10 +251,10 @@ public class GridTaskExecutor {
 
 
     /** {@inheritDoc} */
-    public RestResult execRequest(Ignite ignite,String clusterId, JsonObject params)
+    public RestResult execRequest(Ignite ignite,String cmd, JsonObject params)
         throws IOException {
         if (log.isDebugEnabled())
-            log.debug("Handling request [target=" + clusterId + ", params=" + params + ']');
+            log.debug("Handling request [cmd=" + cmd + ", params=" + params + ']');
 
         IgniteEx igniteEx = (IgniteEx)ignite;
         GridRestProcessor restProcessor = (GridRestProcessor)igniteEx.context().rest();
@@ -263,7 +264,7 @@ public class GridTaskExecutor {
         
         /** Request handlers. */
         GridRestProtocolHandler hnd = U.field(restProcessor, "protoHnd");
-        GridRestResponse cmdRes = processRequest(hnd,clusterId, params);
+        GridRestResponse cmdRes = processRequest(hnd, cmd, params);
         
         if(cmdRes.getSuccessStatus()==STATUS_SUCCESS) {
         	String json = jsonMapper.writer().writeValueAsString(cmdRes.getResponse());
@@ -281,9 +282,9 @@ public class GridTaskExecutor {
      * @param hnd Http hnd.
      * @param params Http params.
      */
-    private GridRestResponse processRequest(GridRestProtocolHandler hnd, String act, JsonObject params) {        
+    private GridRestResponse processRequest(GridRestProtocolHandler hnd, String act, JsonObject params) {
 
-        GridRestCommand cmd = command(params);
+        GridRestCommand cmd = command(act,params);
         GridRestResponse cmdRes;
         if (cmd == null) {
         	cmdRes = new GridRestResponse(STATUS_FAILED, "BAD_REQUEST");
@@ -324,7 +325,7 @@ public class GridTaskExecutor {
         }
         catch (Throwable e) {            
 
-            U.error(log, "Failed to process HTTP request [action=" + act + ", req=" + act + ']', e);
+            U.error(log, "Failed to process HTTP request [action=" + act + ", req=" + params + ']', e);
 
             if (e instanceof Error)
                 throw (Error)e;
@@ -827,10 +828,12 @@ public class GridTaskExecutor {
      * @param req Request.
      * @return Command.
      */
-    @Nullable private GridRestCommand command(JsonObject req) {
+    @Nullable private GridRestCommand command(String act,JsonObject req) {
         String cmd = req.getString("cmd");
-
-        return cmd == null ? null : GridRestCommand.fromKey(cmd.toLowerCase());
+        if(cmd == null){
+            cmd = act;
+        }
+        return StringUtils.isBlank(cmd) ? null : GridRestCommand.fromKey(cmd.toLowerCase());
     }
       
 }

@@ -17,10 +17,14 @@
 
 package org.apache.ignite.internal.management.cache;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.internal.binary.BinaryArray;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -29,24 +33,42 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 /**
  * Filter scan results by specified substring in string presentation of key or value.
  */
-public class VisorQueryScanRegexFilter implements IgniteBiPredicate<Object, Object> {
+public class QueryScanRegexFilter implements IgniteBiPredicate<Object, Object> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Regex pattern to search data. */
-    private final Pattern ptrn;
+    private final List<Pattern> ptrns = new ArrayList<>();
 
     /**
      * Create filter instance.
      *
      * @param caseSensitive Case sensitive flag.
      * @param regex Regex search flag.
-     * @param ptrn String to search in string presentation of key or value.
+     * @param ptrns String to search in string presentation of key or value.
      */
-    public VisorQueryScanRegexFilter(boolean caseSensitive, boolean regex, String ptrn) {
+    public QueryScanRegexFilter(boolean caseSensitive, boolean regex, String[] ptrns) {
         int flags = caseSensitive ? 0 : Pattern.CASE_INSENSITIVE;
+        for(String ptrn: ptrns) {
+            Pattern optrn = Pattern.compile(regex ? ptrn : ".*?" + Pattern.quote(ptrn) + ".*?", flags);
+            this.ptrns.add(optrn);
+        }
+    }
 
-        this.ptrn = Pattern.compile(regex ? ptrn : ".*?" + Pattern.quote(ptrn) + ".*?", flags);
+    public QueryScanRegexFilter(Object[] ptrns) {
+        for(Object arg: ptrns){
+            if(arg instanceof String) {
+                String ptrn = arg.toString();
+                if(ptrn.startsWith("/")){ // regex
+                    Pattern optrn = Pattern.compile(ptrn, 0);
+                    this.ptrns.add(optrn);
+                }
+                else if(!ptrn.isBlank()){ // keyword
+                    Pattern optrn = Pattern.compile(".*?" + Pattern.quote(ptrn) + ".*?", Pattern.CASE_INSENSITIVE);
+                    this.ptrns.add(optrn);
+                }
+            }
+        }
     }
 
     /**
@@ -59,8 +81,11 @@ public class VisorQueryScanRegexFilter implements IgniteBiPredicate<Object, Obje
     @Override public boolean apply(Object key, Object val) {
         String k = key instanceof BinaryObject ? binaryToString((BinaryObject)key) : key.toString();
         String v = val instanceof BinaryObject ? binaryToString((BinaryObject)val) : val.toString();
-
-        return ptrn.matcher(k).find() || ptrn.matcher(v).find();
+        for(Pattern ptrn: ptrns) {
+            boolean matched = ptrn.matcher(k).find() || ptrn.matcher(v).find();
+            if(matched) return true;
+        }
+        return false;
     }
     
 
@@ -89,6 +114,16 @@ public class VisorQueryScanRegexFilter implements IgniteBiPredicate<Object, Obje
                 if (meta.isEnum()) {
                     try {
                         return obj.deserialize().toString();
+                    }
+                    catch (BinaryObjectException ignore) {
+                        // NO-op.
+                    }
+                }
+
+                if (obj instanceof BinaryArray) {
+                    try {
+                        Object[] arr = ((BinaryArray) obj).array();
+                        return Arrays.toString(arr);
                     }
                     catch (BinaryObjectException ignore) {
                         // NO-op.

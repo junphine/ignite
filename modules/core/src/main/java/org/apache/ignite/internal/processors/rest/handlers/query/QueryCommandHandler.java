@@ -26,11 +26,7 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.FETCH_S
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -38,15 +34,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.cache.query.Query;
-import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.SqlQuery;
-import org.apache.ignite.cache.query.TextQuery;
+import org.apache.ignite.cache.query.*;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.management.cache.VisorQueryScanRegexFilter;
+import org.apache.ignite.internal.cache.query.InIndexQueryCriterion;
+import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
+import org.apache.ignite.internal.management.cache.QueryScanRegexFilter;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
@@ -315,22 +308,40 @@ public class QueryCommandHandler extends GridRestCommandHandlerAdapter {
                         break;
 
                     case SCAN:
+                    case INDEX_SCAN:
+                    case TEXT:
+
                         IgniteBiPredicate pred = null;
 
                         if (req.className() != null && !req.className().isBlank()) {
-                        	if(req.className().startsWith("'")) {
-                        		pred = new VisorQueryScanRegexFilter(false,false,req.className().substring(1,req.className().length()-1));
-                        	}
-                        	else if(req.className().startsWith("/")) {
-                        		pred = new VisorQueryScanRegexFilter(true, true, req.className());
+                        	if(req.className().equals("QueryScanRegexFilter")) {
+                                if(req.arguments()!=null){
+                                    pred = new QueryScanRegexFilter(req.arguments());
+                                }
                         	}
                         	else {
                         		pred = instance(IgniteBiPredicate.class, req.className());
                         	}
                         }
                         // add@byron
-                        if(req.sqlQuery() !=null && !req.sqlQuery().isBlank()) {
-                        	qry = new TextQuery(req.typeName(), req.sqlQuery()).setFitler(pred);                        	
+
+                        if(req.typeName()!=null && req.sqlQuery() !=null && !req.sqlQuery().isBlank()) {
+                            qry = new TextQuery(req.typeName(), req.sqlQuery()).setFitler(pred);
+                        }
+                        else if(req.typeName()!=null && req.arguments() !=null ){
+                            IndexQuery indexQuery = new IndexQuery(req.typeName()).setFilter(pred);
+                            if(req.arguments().length==3) {
+                                String field = req.arguments()[0].toString();
+                                RangeIndexQueryCriterion range = new RangeIndexQueryCriterion(field,req.arguments()[1],req.arguments()[2]);
+                                indexQuery.setCriteria(range);
+                            }
+                            else if(req.arguments().length>1) {
+                                String field = req.arguments()[0].toString();
+                                List collection = List.of(req.arguments()).subList(1,req.arguments().length);
+                                InIndexQueryCriterion in = new InIndexQueryCriterion(field,collection);
+                                indexQuery.setCriteria(in);
+                            }
+                            qry = indexQuery;
                         }
                         else {
                         	qry = new ScanQuery(pred);
@@ -381,6 +392,8 @@ public class QueryCommandHandler extends GridRestCommandHandlerAdapter {
 
                             break;
                         case SCAN:
+                        case INDEX_SCAN:
+                        case TEXT:
                             CacheQueryFieldsMetaResult keyField = new CacheQueryFieldsMetaResult();
                             keyField.setFieldName("key");
 

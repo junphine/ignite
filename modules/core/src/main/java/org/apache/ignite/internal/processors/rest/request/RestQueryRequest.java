@@ -202,6 +202,12 @@ public class RestQueryRequest extends GridRestRequest {
         SQL_FIELDS,
 
         /** Scan query. */
-        SCAN
+        SCAN,
+
+        /**Index Scan query. */
+        INDEX_SCAN,
+
+        /** Text query. */
+        TEXT
     }
 }

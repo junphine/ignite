@@ -94,7 +94,7 @@ public class VertxClusterHandler implements ClusterHandler{
     			params.put("input_value", params.getString("text"));
     			String endpoint = params.getString("endpoint","text2gremlin");
             	ServiceResult r = langflowClient.call(endpoint,params);
-            	if(r.getStatus().equals("200")) {
+            	if("200".equals(r.getStatus())) {
             		try {
     		    		JsonArray outputs = (JsonArray)r.getResult().get("outputs");
     		    		for(int i=0;i<outputs.size();i++) {
@@ -144,7 +144,7 @@ public class VertxClusterHandler implements ClusterHandler{
     		}
     		else {
     			IgniteEx igniteEx = (IgniteEx)Ignition.ignite(clusterName);
-    			return gridTaskExecutor.execRequest(igniteEx,clusterId, params);
+    			return gridTaskExecutor.execRequest(igniteEx,cmd, params);
     		}
     		         
         }    	

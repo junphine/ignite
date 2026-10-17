@@ -3695,7 +3695,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
     /**
      * @param cacheName Cache name.
-     * @param clause Clause.
+     * @param qty Clause.
      * @param resType Result type.
      * @param filters Key and value filters.
      * @param <K> Key type.

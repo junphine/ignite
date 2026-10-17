@@ -106,7 +106,7 @@ public class VisorTaskUtils {
         for (Object s : col)
             sb.append(s).append(sep);
 
-        if (sb.length() > 0)
+        if (!sb.isEmpty())
             sb.setLength(sb.length() - sep.length());
 
         return U.compact(sb.toString());
