@@ -31,3 +31,14 @@ interested in):
     </dependencies>
     ...
 </project>
+
+
+LuceneConfiguration
+-------------------
+load from $IGNITE_HOME/config/lucene.xml
+default:   默认的LuceneConfiguration
+[cacheName]:   针对[cacheName]的LuceneConfiguration
+
+注意点
+--------------
+Lucene索引是基于cache的，一个cache一个索引文件，默认的字段类型定义是typeName为cacheName的字段

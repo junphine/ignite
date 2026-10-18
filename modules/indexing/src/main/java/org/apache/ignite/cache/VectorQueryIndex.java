@@ -10,14 +10,14 @@ public class VectorQueryIndex extends QueryIndex {
 	private static final long serialVersionUID = 0L;
 
 	private VectorSimilarityFunction similarity;
-	private VectorEncoding encoding = VectorEncoding.FLOAT32;
-	private int dimensions = 1024;
+	private VectorEncoding encoding = null;
+	private int dimensions = 0;
 
 	/**
 	 * Creates an empty index. Should be populated via setters.
 	 */
 	public VectorQueryIndex() {
-		super.setIndexType(QueryIndexType.FULLTEXT);
+		super.setIndexType(QueryIndexType.VECTOR);
 	}
 
 	/**
@@ -27,18 +27,18 @@ public class VectorQueryIndex extends QueryIndex {
 	 *
 	 */
 	public VectorQueryIndex(String field,VectorSimilarityFunction similarity) {
-		this(field,similarity,1024);
+		this(field,similarity,0);
 	}
 
 
     public VectorQueryIndex(String field,VectorSimilarityFunction similarity,int dimensions) {
-    	super(field, QueryIndexType.FULLTEXT,false);
+    	super(field, QueryIndexType.VECTOR,false);
     	this.similarity = similarity;
 		this.dimensions = dimensions;
     }
 
 	public VectorQueryIndex(String field,VectorSimilarityFunction similarity,int dimensions,VectorEncoding dataType) {
-		super(field, QueryIndexType.FULLTEXT,false);
+		super(field, QueryIndexType.VECTOR,false);
 		this.similarity = similarity;
 		this.dimensions = dimensions;
 		this.encoding = dataType;
@@ -60,7 +60,6 @@ public class VectorQueryIndex extends QueryIndex {
 	public void setDimensions(int dimensions) {
 		this.dimensions = dimensions;
 	}
-
 
 	public VectorEncoding getEncoding() {
 		return encoding;

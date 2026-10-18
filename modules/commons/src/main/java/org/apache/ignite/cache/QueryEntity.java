@@ -665,8 +665,11 @@ public class QueryEntity implements Serializable {
                         if(vecAnn.name()!=null){
                             prop.alias(vecAnn.name());
                         }
+                        String idxName = cls.getSimpleName() + "_" + prop.alias() + "_idx";
                         type.addProperty(prop, null, key, true);
-                        type.addFieldToTextIndex(prop.fullName());
+
+                        type.addIndex(idxName, QueryIndexType.VECTOR, vecAnn.dimension());
+                        type.addFieldToIndex(idxName, prop.fullName(), 0, true);
                     }
                     // end@
                 }

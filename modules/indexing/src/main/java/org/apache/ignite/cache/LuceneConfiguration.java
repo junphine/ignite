@@ -1,17 +1,12 @@
 package org.apache.ignite.cache;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.util.spring.IgniteSpringHelper;
 import org.apache.ignite.plugin.PluginConfiguration;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.VectorEncoding;
 import org.apache.lucene.index.VectorSimilarityFunction;
 import org.h2.util.Utils;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * lucene index config for doc type. 
@@ -43,27 +38,25 @@ public class LuceneConfiguration implements PluginConfiguration {
 	private VectorEncoding vectorEncoding = VectorEncoding.FLOAT32;
 
 	private int dimensions = 1024;
-		
-	private String cacheName = null;
 	
 	private Map<String, Analyzer> fieldAnalyzerMap = new HashMap<>();
-	
-	
 
 	public LuceneConfiguration() {
-
 		this.storeTextFieldValue = Utils.getProperty("h2.storeDocumentTextInIndex", false);
 		this.storeValue = Utils.getProperty("h2.storeValueInIndex", false);		
 	}
 
 	public LuceneConfiguration(LuceneConfiguration copy) {
+		this.offHeapStore = copy.offHeapStore;
 		this.storeTextFieldValue = copy.storeTextFieldValue;
 		this.storeValue = copy.storeValue;
 		this.persistenceEnabled = copy.persistenceEnabled;
-		this.cacheName = copy.cacheName;
 		this.fieldAnalyzerMap = new HashMap<>(copy.fieldAnalyzerMap);
 		this.indexAnalyzer = copy.indexAnalyzer;
 		this.queryAnalyzer = copy.queryAnalyzer;
+		this.dimensions = copy.dimensions;
+		this.vectorEncoding = copy.vectorEncoding;
+		this.vectorSimilarityFunction = copy.vectorSimilarityFunction;
 	}
 	
 	public boolean isPersistenceEnabled() {
@@ -112,15 +105,6 @@ public class LuceneConfiguration implements PluginConfiguration {
 
 	public void setStoreValue(boolean storeValue) {
 		this.storeValue = storeValue;
-	}
-
-	public LuceneConfiguration cacheName(String cacheName){
-		this.cacheName = cacheName;
-		return this;
-	}
-	
-	public String cacheName(){
-		return cacheName;
 	}
 
 	public Map<String, Analyzer> getFieldAnalyzerMap() {

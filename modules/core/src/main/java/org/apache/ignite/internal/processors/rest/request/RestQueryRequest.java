@@ -21,7 +21,7 @@ package org.apache.ignite.internal.processors.rest.request;
  * Sql query request.
  */
 public class RestQueryRequest extends GridRestRequest {
-    /** Sql query. */
+    /** Sql query or luence keyword. */
     private String sqlQry;
 
     /** Sql query arguments. */

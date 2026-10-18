@@ -95,16 +95,16 @@ public class GridLuceneIndex implements AutoCloseable {
         FullTextLucene.ctx = ctx;
         try {
 			indexAccess = LuceneIndexAccess.getIndexAccess(ctx, cacheName);
-			init();  
+			init(type);
 			
 		} catch (IOException e) {
 			ctx.grid().log().error(e.getMessage(),e);
 	        throw new IgniteCheckedException(e);
-		}  
+		}
              
     }
 
-	private void init() {
+	private void init(GridQueryTypeDescriptor type) {
 		QueryIndexDescriptorImpl qtextIdx = ((QueryIndexDescriptorImpl) type.textIndex());
 		if (qtextIdx!=null) {
 			Map<String,FieldType> fields = indexAccess.init(type);
@@ -167,7 +167,7 @@ public class GridLuceneIndex implements AutoCloseable {
         }     
         // index fields have changed!
         if(idxdFields.length>1 && idxdFields.length-1 != indexAccess.fields(type.name()).size()) {
-        	init();
+        	init(type);
         }
         Object[] row = new Object[idxdFields.length]; 
         for (int i = 0, last = idxdFields.length - 1; i < last; i++) {

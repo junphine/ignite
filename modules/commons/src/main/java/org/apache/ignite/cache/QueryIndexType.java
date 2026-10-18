@@ -34,6 +34,11 @@ public enum QueryIndexType {
     FULLTEXT,
 
     /**
+     * vector index.
+     */
+    VECTOR,
+
+    /**
      * Geo-spatial index.
      */
     GEOSPATIAL;

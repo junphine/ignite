@@ -140,10 +140,6 @@ public class FullTextLucene {
         return (Z)ctx.cacheObjects().unmarshal(coctx, bytes, ldr);
     }
     
-    
-    
-
-    
     /**
      * Initializes full text search functionality for this database. This adds
      * the following Java functions to the database:
@@ -549,7 +545,7 @@ public class FullTextLucene {
      *
      * @param conn the connection
      * @return the index access wrapper
-     * @throws IOException 
+     * @throws SQLException
      */
     public static LuceneIndexAccess getIndexAccess(Connection conn,String schema,String table)
             throws SQLException {
@@ -786,7 +782,7 @@ public class FullTextLucene {
             return result;
         }
         try {
-        	String cacheName = access.cacheName();
+        	String cacheName = access.getCacheName();
         	ClassLoader ldr = null;
             
             GridCacheAdapter cache = null;

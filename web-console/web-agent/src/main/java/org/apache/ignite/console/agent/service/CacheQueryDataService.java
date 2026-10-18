@@ -34,7 +34,7 @@ public class CacheQueryDataService implements CacheAgentService,McpService {
 				.description("Query cache data from cluster use sql or keyword")
 				.parameter("cacheName","string","Ignie cache name",true)
 				.parameter("typeName","string","Ignie entity type name",true)
-				.parameter("sqlQry","string","SQL or Luence query keyword",true)
+				.parameter("sqlQry","string","SQL or Luence query keyword",false)
 				.parameter("arguments","array","Query arguments",false)
 				.parameter("queryType",queryType,true)
 				.executor((Map<String,Object> param)->{

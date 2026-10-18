@@ -789,9 +789,10 @@ public class QueryUtils {
         String idxName = indexName(typeDesc.tableName(), idx);
         QueryIndexType idxTyp = idx.getIndexType();
 
-        assert idxTyp == QueryIndexType.SORTED || idxTyp == QueryIndexType.GEOSPATIAL;
+        assert idxTyp == QueryIndexType.SORTED || idxTyp == QueryIndexType.VECTOR || idxTyp == QueryIndexType.GEOSPATIAL;
 
         QueryIndexDescriptorImpl res = new QueryIndexDescriptorImpl(typeDesc, idxName, idxTyp, idx.getInlineSize());
+        res.setQueryIndex(idx);
 
         int i = 0;
 
@@ -820,7 +821,7 @@ public class QueryUtils {
     private static void processIndex(QueryIndex idx, QueryTypeDescriptorImpl d) throws IgniteCheckedException {
         QueryIndexType idxTyp = idx.getIndexType();
 
-        if (idxTyp == QueryIndexType.SORTED || idxTyp == QueryIndexType.GEOSPATIAL) {
+        if (idxTyp == QueryIndexType.SORTED || idxTyp == QueryIndexType.VECTOR || idxTyp == QueryIndexType.GEOSPATIAL) {
             QueryIndexDescriptorImpl idxDesc = createIndexDescriptor(d, idx);
 
             d.addIndex(idxDesc);

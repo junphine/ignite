@@ -13,6 +13,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.query.annotations.QueryVectorField;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryIndexDescriptorImpl;
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneDirectory;
@@ -45,6 +46,8 @@ public class LuceneIndexAccess {
 	 
     /** spring ctx for lucene.xml */
 	public static ApplicationContext springCtx = null;
+
+	private static long lastModifyTime = System.currentTimeMillis();
     
     private static final Map<String, LuceneIndexAccess> INDEX_ACCESS = new ConcurrentHashMap<>();
     
@@ -80,6 +83,8 @@ public class LuceneIndexAccess {
 	public HashMap<String,Map<String,FieldType>> typeFields = new HashMap<>();
 	
 	public LuceneConfiguration config;
+
+	private String cacheName = null;
 	
 	private GridKernalContext ctx;
 	/**
@@ -92,8 +97,11 @@ public class LuceneIndexAccess {
 	public LuceneIndexAccess(GridKernalContext ctx, String cacheName,String path) throws IOException{	
 		this.ctx = ctx;
 		try{
-        	if(springCtx==null && ctx!=null)
-        		springCtx = initContext(new FileInputStream(ctx.config().getIgniteHome()+"/config/lucene.xml"));    
+			File lucencConfigFile = new File(ctx.config().getIgniteHome() + "/config/lucene.xml");
+        	if(springCtx==null || lucencConfigFile.lastModified()>lastModifyTime) {
+				springCtx = initContext(new FileInputStream(lucencConfigFile));
+				lastModifyTime = lucencConfigFile.lastModified();
+			}
         	
     		if(springCtx.containsBean(cacheName)){
     			this.config = springCtx.getBean(cacheName,LuceneConfiguration.class);
@@ -113,12 +121,11 @@ public class LuceneIndexAccess {
         
         //if no ctx use lucene to store val.
         if(ctx==null){
-        	this.config.setStoreValue(true);
-        	this.config.cacheName(cacheName);
+        	this.setCacheName(cacheName);
         }
         else{
         	FullTextLucene.ctx = ctx;    
-        	this.config.cacheName(cacheName);        	   	
+        	this.setCacheName(cacheName);
         	this.config.setPersistenceEnabled(ctx.config().getDataStorageConfiguration().getDefaultDataRegionConfiguration().isPersistenceEnabled());
         } 
     	
@@ -142,50 +149,67 @@ public class LuceneIndexAccess {
 				return config.getQueryAnalyzer();
 			}		
 			Analyzer ana = new StandardAnalyzer();
-			return ana;			
+			return ana;
 		}
 		return _instance;
-	}	
-	
+	}
+
+
+	public String getCacheName() {
+		return cacheName;
+	}
+
+	public void setCacheName(String cacheName) {
+		this.cacheName = cacheName;
+	}
 	
 	public Map<String,FieldType> init(GridQueryTypeDescriptor type) {
 		Map<String,FieldType> fields = fields(type.name());
 		try{        		
 			QueryIndex qtextIdx = ((QueryIndexDescriptorImpl)type.textIndex()).getQueryIndex();
-			Collection<String> vectorFields = Collections.emptyList();
+			Set<String> vectorFields = new LinkedHashSet<>();
+
             if(qtextIdx instanceof FullTextQueryIndex){
 				FullTextQueryIndex textIdx = (FullTextQueryIndex)qtextIdx;
 				if(textIdx.getAnalyzer()!=null)
 				   this.config.setIndexAnalyzer(springCtx.getBean(textIdx.getAnalyzer(),Analyzer.class));
 				if(textIdx.getQueryAnalyzer()!=null)
 				   this.config.setQueryAnalyzer(springCtx.getBean(textIdx.getQueryAnalyzer(),Analyzer.class));
-     		
             }
-			else if(qtextIdx instanceof VectorQueryIndex){
-				VectorQueryIndex textIdx = (VectorQueryIndex)qtextIdx;
-				if(textIdx.getSimilarity()!=null) {
-					this.config.setVectorSimilarityFunction(textIdx.getSimilarity());
-				}
-				if(textIdx.getEncoding()!=null) {
-					this.config.setVectorEncoding(textIdx.getEncoding());
-				}
-				if(textIdx.getDimensions()>0) {
-					this.config.setDimensions(textIdx.getDimensions());
-				}
 
-				vectorFields = textIdx.getFieldNames();
-
+			for(Map.Entry<String, GridQueryIndexDescriptor> indexes: type.indexes().entrySet()){
+				if(indexes.getValue().type()==QueryIndexType.VECTOR){
+					if(indexes.getValue() instanceof QueryIndexDescriptorImpl){
+						QueryIndex vectorIdx = ((QueryIndexDescriptorImpl)indexes.getValue()).getQueryIndex();
+						if(vectorIdx instanceof VectorQueryIndex){
+							VectorQueryIndex textIdx = (VectorQueryIndex)vectorIdx;
+							if(textIdx.getSimilarity()!=null) {
+								this.config.setVectorSimilarityFunction(textIdx.getSimilarity());
+							}
+							if(textIdx.getEncoding()!=null) {
+								this.config.setVectorEncoding(textIdx.getEncoding());
+							}
+							if(textIdx.getDimensions()>0) {
+								this.config.setDimensions(textIdx.getDimensions());
+							}
+							vectorFields.addAll(textIdx.getFieldNames());
+							for(String field: textIdx.getFieldNames()){
+								FieldType fieldType = new FieldType();
+								fieldType.setVectorAttributes(this.config.getDimensions(), this.config.getVectorEncoding(), this.config.getVectorSimilarityFunction());
+								fieldType.freeze();
+								fields.put(field,fieldType);
+							}
+						}
+					}
+				}
 			}
     		  
             Field.Store storeText = config.isStoreTextFieldValue()?  Field.Store.YES : Field.Store.NO;     
         	if(qtextIdx!=null){
         		//-fields.clear();
         		for(String field: type.textIndex().fields()) {
-					if(vectorFields.contains(field)){
-						FieldType fieldType = new FieldType();
-						fieldType.setVectorAttributes(this.config.getDimensions(), this.config.getVectorEncoding(), this.config.getVectorSimilarityFunction());
-						fieldType.freeze();
-						fields.put(field,fieldType);
+					if(fields.containsKey(field)){
+
 					}
 					else {
 						if (config.isStoreTextFieldValue()) {
@@ -307,12 +331,7 @@ public class LuceneIndexAccess {
         this.writer = writer;
         this.reader = reader;
         this.searcher = new IndexSearcher(reader);           
-    }    
-	
-	
-	public String cacheName(){
-		return config.cacheName();
-	}	
+    }
 	
     /**
      * Commit all changes to the Lucene index.
@@ -400,25 +419,14 @@ public class LuceneIndexAccess {
             LuceneIndexAccess access = INDEX_ACCESS.get(path);
            
             if (access == null) {
-                try {                	
-                	access = new LuceneIndexAccess(ctx,cacheName,path);                     
-                    
-                } catch (IOException e) {
-                    throw e;
-                }
-                
-                INDEX_ACCESS.put(path, access);                
-                
+				access = new LuceneIndexAccess(ctx,cacheName,path);
+
+				INDEX_ACCESS.put(path, access);
             }
             
             if (!access.writer.isOpen()) {
-                try {
-                	access.open(path);                 
-                    
-                } catch (IOException e) {
-                    throw e;
-                }               
-            }
+				access.open(path);
+			}
             
             return access;
         }
