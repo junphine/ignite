@@ -92,10 +92,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.GPC;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiInClosure;
-import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.lang.*;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.jetbrains.annotations.NotNull;
@@ -725,7 +722,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                 return new GridFinishedFuture<>(ex);
 
             final Map<K1, V1> map = keysSize == 1
-                ? (Map<K1, V1>)new IgniteBiTuple<>()
+                ? new IgniteOneRowMap<>()
                 : U.newHashMap(keysSize);
 
             final boolean storeEnabled = !skipVals && readThrough && ctx.readThrough();

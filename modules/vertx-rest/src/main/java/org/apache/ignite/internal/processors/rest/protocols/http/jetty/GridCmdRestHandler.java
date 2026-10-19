@@ -336,7 +336,13 @@ public class GridCmdRestHandler extends Vertxlet {
         Map<String, String> params = parameters(req);
 
         try {
-            GridRestRequest cmdReq = createRequest(cmd, params, req, rc);
+            GridRestRequest cmdReq = createRequest(cmd, params, this.jsonMapper);
+
+            cmdReq.address(new InetSocketAddress(req.remoteAddress().host(), req.remoteAddress().port()));
+            Object certs = rc.get("jakarta.servlet.request.X509Certificate");
+
+            if (certs instanceof X509Certificate[])
+                cmdReq.certificates((X509Certificate[])certs);
 
             if (log.isDebugEnabled())
                 log.debug("Initialized command request: " + cmdReq);
@@ -404,15 +410,14 @@ public class GridCmdRestHandler extends Vertxlet {
      *
      * @param cmd Command.
      * @param params Parameters.
-     * @param req Servlet request.
+     * @param jsonMapper jsonMapper.
      * @return REST request.
      * @throws IgniteCheckedException If creation failed.
      */
-    @Nullable private GridRestRequest createRequest(
+    @Nullable public static GridRestRequest createRequest(
         GridRestCommand cmd,
         Map<String, String> params,
-        HttpServerRequest req,
-        RoutingContext rc
+        ObjectMapper jsonMapper
     ) throws IgniteCheckedException {
         GridRestRequest restReq;
 
@@ -763,6 +768,12 @@ public class GridCmdRestHandler extends Vertxlet {
                 restReq0.cacheName(params.get(CACHE_NAME_PARAM));
 
                 restReq0.className(params.get("className"));
+
+                StringConverter converter = new StringConverter(restReq0.cacheName(),jsonMapper);
+
+                restReq0.arguments(converter.values(null, "arg", params).toArray());
+
+                restReq0.typeName(params.get("type"));
                 
                 String keepBinary = params.get("keepBinary");
 
@@ -831,14 +842,7 @@ public class GridCmdRestHandler extends Vertxlet {
                 throw new IgniteCheckedException("Invalid command: " + cmd);
         }
 
-        restReq.address(new InetSocketAddress(req.remoteAddress().host(), req.remoteAddress().port()));
-
         restReq.command(cmd);
-
-        Object certs = rc.get("jakarta.servlet.request.X509Certificate");
-
-        if (certs instanceof X509Certificate[])
-            restReq.certificates((X509Certificate[])certs);
 
         // TODO: In IGNITE 3.0 we should check credentials only for AUTHENTICATE command.
         if (!credentials(params, IGNITE_LOGIN, IGNITE_PASSWORD, restReq))
@@ -889,7 +893,7 @@ public class GridCmdRestHandler extends Vertxlet {
      * @param restReq Request to add credentials if any.
      * @return {@code true} If params contains credentials.
      */
-    private boolean credentials(Map<String, String> params, String userParam, String pwdParam,
+    private static boolean credentials(Map<String, String> params, String userParam, String pwdParam,
         GridRestRequest restReq) {
         boolean hasCreds = params.containsKey(userParam) || params.containsKey(pwdParam);
 

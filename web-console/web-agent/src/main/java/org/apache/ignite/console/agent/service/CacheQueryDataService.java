@@ -33,9 +33,11 @@ public class CacheQueryDataService implements CacheAgentService,McpService {
 				.name("query-cache")
 				.description("Query cache data from cluster use sql or keyword")
 				.parameter("cacheName","string","Ignie cache name",true)
-				.parameter("typeName","string","Ignie entity type name",true)
-				.parameter("sqlQry","string","SQL or Luence query keyword",false)
-				.parameter("arguments","array","Query arguments",false)
+				.parameter("type","string","Ignie entity type name",true)
+				.parameter("qry","string","SQL or Luence query keyword",false)
+				.parameter("arg","array","Query arguments",false)
+				.parameter("className","string","Filter className",false)
+				.parameter("pageSize","int","pageSize",false)
 				.parameter("queryType",queryType,true)
 				.executor((Map<String,Object> param)->{
 					return this.call((String)param.get("cacheName"),param);
@@ -57,7 +59,16 @@ public class CacheQueryDataService implements CacheAgentService,McpService {
 			GridTaskExecutor taskExecutor = new GridTaskExecutor();
 			JsonObject param = new JsonObject(payload);
 			param.put("cacheName",cache);
-			RestResult res = taskExecutor.execRequest(ignite,"qryscanexe",param);
+			param.put("keepBinary",true);
+
+			String queryType = (String)payload.get("queryType");
+			String cmd = "qryscanexe";
+			if("SQL_FIELDS".equalsIgnoreCase(queryType))
+				cmd = "qryfldexe";
+			if("SQL".equalsIgnoreCase(queryType))
+				cmd = "qryexe";
+
+			RestResult res = taskExecutor.execRequest(ignite,cmd,param);
 			if(res.getStatus()==0){
 				result.put("data",res.getData());
 				result.setStatus("succes");
@@ -71,7 +82,6 @@ public class CacheQueryDataService implements CacheAgentService,McpService {
 			result.setAcknowledged(false);
 			message.add(e.getMessage());
 		}
-		result.put("deletedCount", count);
 		return result;
 	}
 

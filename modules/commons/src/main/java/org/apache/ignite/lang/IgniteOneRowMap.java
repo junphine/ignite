@@ -129,11 +129,13 @@ public final class IgniteOneRowMap<V1, V2> implements Map.Entry<V1, V2>,Map<V1, 
     }
 
     /** {@inheritDoc} */
+    @Override
     public int size() {
         return val1 == null && val2 == null ? 0 : 1;
     }
 
     /** {@inheritDoc} */
+    @Override
     public boolean isEmpty() {
         return size() == 0;
     }
@@ -149,11 +151,13 @@ public final class IgniteOneRowMap<V1, V2> implements Map.Entry<V1, V2>,Map<V1, 
     }
 
     /** {@inheritDoc} */
+    @Override
     @Nullable public V2 get(Object key) {
         return containsKey(key) ? val2 : null;
     }
 
     /** {@inheritDoc} */
+    @Override
     @Nullable public V2 put(V1 key, V2 val) {
         V2 old = containsKey(key) ? val2 : null;
 
@@ -163,6 +167,7 @@ public final class IgniteOneRowMap<V1, V2> implements Map.Entry<V1, V2>,Map<V1, 
     }
 
     /** {@inheritDoc} */
+    @Override
     @Nullable public V2 remove(Object key) {
         if (containsKey(key)) {
             V2 v2 = val2;
@@ -177,6 +182,7 @@ public final class IgniteOneRowMap<V1, V2> implements Map.Entry<V1, V2>,Map<V1, 
     }
 
     /** {@inheritDoc} */
+    @Override
     public void putAll(Map<? extends V1, ? extends V2> m) {
         A.notNull(m, "m");
         A.ensure(m.size() <= 1, "m.size() <= 1");
@@ -186,22 +192,26 @@ public final class IgniteOneRowMap<V1, V2> implements Map.Entry<V1, V2>,Map<V1, 
     }
 
     /** {@inheritDoc} */
+    @Override
     public void clear() {
         val1 = null;
         val2 = null;
     }
 
     /** {@inheritDoc} */
+    @Override
     public Set<V1> keySet() {
         return Collections.singleton(val1);
     }
 
     /** {@inheritDoc} */
+    @Override
     public Collection<V2> values() {
         return Collections.singleton(val2);
     }
 
     /** {@inheritDoc} */
+    @Override
     public Set<Entry<V1, V2>> entrySet() {
         return isEmpty() ?
             Collections.<Entry<V1, V2>>emptySet() :
