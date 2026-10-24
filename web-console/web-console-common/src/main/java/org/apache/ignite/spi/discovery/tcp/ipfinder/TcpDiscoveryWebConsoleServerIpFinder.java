@@ -355,6 +355,8 @@ public class TcpDiscoveryWebConsoleServerIpFinder extends TcpDiscoveryIpFinderAd
         }
         catch (IOException e) {
             throw new IgniteSpiException("Failed to create file.", e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 

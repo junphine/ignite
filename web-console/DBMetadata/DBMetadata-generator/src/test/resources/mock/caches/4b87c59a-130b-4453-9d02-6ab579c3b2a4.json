@@ -1,0 +1,25 @@
+{
+  "name": "ProfileFieldsCache",
+  "cacheMode": "PARTITIONED",
+  "atomicityMode": "ATOMIC",
+  "readThrough": true,
+  "writeThrough": true,
+  "id": "4b87c59a-130b-4453-9d02-6ab579c3b2a4",
+  "domains": [
+    "98f446ac-702b-403a-8b82-ca4c326ad880"
+  ],
+  "cacheStoreFactory": {
+    "kind": "CacheJdbcPojoStoreFactory",
+    "HiveCacheJdbcPojoStoreFactory": {
+      "dataSourceBean": "drupal_main_db",
+      "dialect": "MySQL"
+    },
+    "CacheJdbcPojoStoreFactory": {
+      "dataSourceBean": "drupal_main_db",
+      "dialect": "MySQL"
+    },
+    "CacheJdbcBlobStoreFactory": {
+      "connectVia": "DataSource"
+    }
+  }
+}

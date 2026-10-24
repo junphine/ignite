@@ -23,9 +23,9 @@ import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.plugin.extensions.communication.AbstractMessage;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,7 +39,7 @@ import java.util.Objects;
 /**
  * File's binary data block key.
  */
-public final class IgfsBlockKey implements IgfsBaseBlockKey, Message, Externalizable, Binarylizable, Comparable<IgfsBlockKey> {
+public final class IgfsBlockKey extends AbstractMessage implements IgfsBaseBlockKey, Message, Externalizable, Binarylizable, Comparable<IgfsBlockKey> {
     /** */
     private static final long serialVersionUID = 0L;
 

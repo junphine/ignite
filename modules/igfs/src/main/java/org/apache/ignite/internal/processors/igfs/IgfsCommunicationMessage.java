@@ -20,12 +20,13 @@ package org.apache.ignite.internal.processors.igfs;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.MarshallableMessage;
 import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.plugin.extensions.communication.AbstractMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Base class for all IGFS communication messages sent between nodes.
  */
-public abstract class IgfsCommunicationMessage implements MarshallableMessage {
+public abstract class IgfsCommunicationMessage extends AbstractMessage implements MarshallableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

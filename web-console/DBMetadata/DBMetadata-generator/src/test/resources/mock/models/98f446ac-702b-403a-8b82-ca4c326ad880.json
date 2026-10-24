@@ -1,0 +1,191 @@
+{
+  "id": "98f446ac-702b-403a-8b82-ca4c326ad880",
+  "generatePojo": true,
+  "caches": [
+    "4b87c59a-130b-4453-9d02-6ab579c3b2a4"
+  ],
+  "queryKeyFields": [
+    "fid"
+  ],
+  "queryMetadata": "Configuration",
+  "keyType": "Integer",
+  "valueType": "com.lr.drupal.model.ProfileFields",
+  "databaseSchema": "drupal_user_db",
+  "databaseTable": "profile_fields",
+  "fields": [
+    {
+      "name": "fid",
+      "className": "Integer"
+    },
+    {
+      "name": "title",
+      "className": "String",
+      "comment": "标题"
+    },
+    {
+      "name": "name",
+      "className": "String",
+      "comment": "名称"
+    },
+    {
+      "name": "explanation",
+      "className": "String"
+    },
+    {
+      "name": "category",
+      "className": "String"
+    },
+    {
+      "name": "page",
+      "className": "String"
+    },
+    {
+      "name": "type",
+      "className": "String"
+    },
+    {
+      "name": "weight",
+      "className": "Byte"
+    },
+    {
+      "name": "required",
+      "className": "Byte"
+    },
+    {
+      "name": "register",
+      "className": "Byte"
+    },
+    {
+      "name": "visibility",
+      "className": "Byte"
+    },
+    {
+      "name": "autocomplete",
+      "className": "Byte"
+    },
+    {
+      "name": "options",
+      "className": "String"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "name",
+      "indexType": "SORTED",
+      "fields": [
+        {
+          "name": "name",
+          "direction": false
+        }
+      ]
+    },
+    {
+      "name": "category",
+      "indexType": "SORTED",
+      "fields": [
+        {
+          "name": "category",
+          "direction": false
+        }
+      ]
+    }
+  ],
+  "keyFields": [
+    {
+      "databaseFieldName": "fid",
+      "databaseFieldType": "INTEGER",
+      "javaType": "Integer",
+      "javaFieldName": "fid",
+      "javaFieldType": "int"
+    }
+  ],
+  "aliases": [],
+  "valueFields": [
+    {
+      "databaseFieldName": "title",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "title",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "name",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "name",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "explanation",
+      "databaseFieldType": "LONGVARCHAR",
+      "javaType": "String",
+      "javaFieldName": "explanation",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "category",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "category",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "page",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "page",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "type",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "type",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "weight",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "weight",
+      "javaFieldType": "byte"
+    },
+    {
+      "databaseFieldName": "required",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "required",
+      "javaFieldType": "byte"
+    },
+    {
+      "databaseFieldName": "register",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "register",
+      "javaFieldType": "byte"
+    },
+    {
+      "databaseFieldName": "visibility",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "visibility",
+      "javaFieldType": "byte"
+    },
+    {
+      "databaseFieldName": "autocomplete",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "autocomplete",
+      "javaFieldType": "byte"
+    },
+    {
+      "databaseFieldName": "options",
+      "databaseFieldType": "LONGVARCHAR",
+      "javaType": "String",
+      "javaFieldName": "options",
+      "javaFieldType": "String"
+    }
+  ],
+  "keyFieldName": "fid",
+  "tableComment": "用户资料：可扩展"
+}

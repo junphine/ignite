@@ -1,0 +1,25 @@
+{
+  "name": "UsersCache",
+  "cacheMode": "PARTITIONED",
+  "atomicityMode": "ATOMIC",
+  "readThrough": true,
+  "writeThrough": true,
+  "id": "e4074853-bb86-45e9-aece-3abe172d57ca",
+  "domains": [
+    "b882a577-1f0d-4a3f-9f83-723e7a932519"
+  ],
+  "cacheStoreFactory": {
+    "kind": "CacheJdbcPojoStoreFactory",
+    "HiveCacheJdbcPojoStoreFactory": {
+      "dataSourceBean": "drupal_main_db",
+      "dialect": "MySQL"
+    },
+    "CacheJdbcPojoStoreFactory": {
+      "dataSourceBean": "drupal_main_db",
+      "dialect": "MySQL"
+    },
+    "CacheJdbcBlobStoreFactory": {
+      "connectVia": "DataSource"
+    }
+  }
+}

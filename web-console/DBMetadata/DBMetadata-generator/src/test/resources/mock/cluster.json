@@ -1,0 +1,101 @@
+{
+  "id": "4fc71456-fb6c-421f-8b6e-eb50c1039ced",
+  "activeOnStart": true,
+  "cacheSanityCheckEnabled": true,
+  "atomicConfiguration": {},
+  "cacheKeyConfiguration": [],
+  "deploymentSpi": {
+    "URI": {
+      "uriList": [],
+      "scanners": []
+    }
+  },
+  "marshaller": {},
+  "peerClassLoadingLocalClassPathExclude": [],
+  "sslContextFactory": {
+    "trustManagers": []
+  },
+  "swapSpaceSpi": {},
+  "transactionConfiguration": {},
+  "dataStorageConfiguration": {
+    "pageSize": null,
+    "concurrencyLevel": null,
+    "defaultDataRegionConfiguration": {
+      "name": "default"
+    },
+    "dataRegionConfigurations": []
+  },
+  "serviceConfigurations": [],
+  "executorConfiguration": [],
+  "sqlConnectorConfiguration": {
+    "tcpNoDelay": true
+  },
+  "clientConnectorConfiguration": {
+    "tcpNoDelay": true,
+    "jdbcEnabled": true,
+    "odbcEnabled": true,
+    "thinClientEnabled": true,
+    "useIgniteSslContextFactory": true
+  },
+  "discovery": {
+    "kind": "WebConsoleServer",
+    "Vm": {
+      "addresses": [
+        "127.0.0.1:47500..47510"
+      ]
+    },
+    "ZooKeeper": {
+      "zkConectionString": "127.0.0.1:2181",
+      "zkConnectionString": "localhost:2181"
+    },
+    "Multicast": {
+      "addresses": [
+        "127.0.0.1:47500..47510"
+      ]
+    },
+    "WebConsoleServer": {
+      "accountToken": "7ed238d0-601c-467a-a798-e4fe08ac0b39"
+    }
+  },
+  "binaryConfiguration": {
+    "typeConfigurations": [],
+    "compactFooter": true
+  },
+  "communication": {
+    "tcpNoDelay": true
+  },
+  "connector": {
+    "noDelay": true
+  },
+  "collision": {
+    "kind": "Noop",
+    "JobStealing": {
+      "stealingEnabled": true
+    },
+    "PriorityQueue": {
+      "starvationPreventionEnabled": true
+    }
+  },
+  "failoverSpi": [],
+  "caches": [
+    "4b87c59a-130b-4453-9d02-6ab579c3b2a4",
+    "5f411376-4639-4b6e-85c1-3380cccbecff",
+    "d1458e80-2304-4847-b79d-a11814978548",
+    "586c23c7-aa90-4e00-9777-faddb4e7c4ec",
+    "4495fd74-f33c-43d5-8312-eba2113e48a6",
+    "e4074853-bb86-45e9-aece-3abe172d57ca"
+  ],
+  "models": [
+    "98f446ac-702b-403a-8b82-ca4c326ad880",
+    "b4dc7e48-cf0d-48f7-9f36-4efcc430d84d",
+    "3faae6d0-d51a-4d41-8e16-f953cdfcfee4",
+    "416f223d-d12f-42b1-87e2-0e584ab472cb",
+    "fde9438c-7149-42a4-89de-c7d85a9350e6",
+    "b882a577-1f0d-4a3f-9f83-723e7a932519"
+  ],
+  "checkpointSpi": [],
+  "loadBalancingSpi": [],
+  "autoActivationEnabled": true,
+  "name": "user_db",
+  "demo": false
+}

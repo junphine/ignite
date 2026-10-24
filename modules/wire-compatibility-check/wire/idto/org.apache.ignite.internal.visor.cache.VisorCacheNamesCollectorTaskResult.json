@@ -1,0 +1,9 @@
+{
+  "class": "org.apache.ignite.internal.visor.cache.VisorCacheNamesCollectorTaskResult",
+  "fields": [
+    {"order": 0, "type": "java.util.Map<java.lang.String,org.apache.ignite.lang.IgniteUuid>", "name": "caches"},
+    {"order": 1, "type": "java.util.Map<java.lang.String,java.lang.String>", "name": "cachesComment"},
+    {"order": 2, "type": "java.util.Map<java.lang.String,java.lang.String>", "name": "sqlSchemas"},
+    {"order": 3, "type": "java.util.Map<java.lang.String,java.lang.String>", "name": "types"}
+  ]
+}

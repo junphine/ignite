@@ -1,0 +1,25 @@
+{
+  "name": "UcZonesCache",
+  "cacheMode": "PARTITIONED",
+  "atomicityMode": "ATOMIC",
+  "readThrough": true,
+  "writeThrough": true,
+  "id": "4495fd74-f33c-43d5-8312-eba2113e48a6",
+  "domains": [
+    "fde9438c-7149-42a4-89de-c7d85a9350e6"
+  ],
+  "cacheStoreFactory": {
+    "kind": "CacheJdbcPojoStoreFactory",
+    "HiveCacheJdbcPojoStoreFactory": {
+      "dataSourceBean": "drupal_main_db",
+      "dialect": "MySQL"
+    },
+    "CacheJdbcPojoStoreFactory": {
+      "dataSourceBean": "drupal_main_db",
+      "dialect": "MySQL"
+    },
+    "CacheJdbcBlobStoreFactory": {
+      "connectVia": "DataSource"
+    }
+  }
+}

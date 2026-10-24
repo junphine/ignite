@@ -23,9 +23,8 @@ import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.plugin.extensions.communication.AbstractMessage;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Externalizable;
@@ -41,7 +40,7 @@ import java.util.Objects;
 /**
  * Affinity range.
  */
-public class IgfsFileAffinityRange implements Message, Externalizable, Binarylizable {
+public class IgfsFileAffinityRange extends AbstractMessage implements Message, Externalizable, Binarylizable {
     /** */
     private static final long serialVersionUID = 0L;
 

@@ -82,7 +82,7 @@ public class DiscoveryInfoService {
         }
     }
 
-    public void putClusterProperties(String cluster, UUID nodeId, JsonObject st) {
+    public void putClusterProperties(String cluster, UUID nodeId, JsonObject st) throws IOException, InterruptedException {
 
         String url = this.masterUrl+ "/api/v1/disco/"+cluster+"/"+nodeId+"/"+NODE_JOINED;
 
@@ -91,7 +91,7 @@ public class DiscoveryInfoService {
                 .header("Authorization", "token " + accountToken)
                 .PUT(HttpRequest.BodyPublishers.ofString(st.toString()))
                 .build();
-        httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding());
+        httpClient.send(request, HttpResponse.BodyHandlers.discarding());
     }
 
     public void unregisterAddresses(String cluster,JsonArray addresses) {

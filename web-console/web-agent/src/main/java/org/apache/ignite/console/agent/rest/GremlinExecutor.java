@@ -1,5 +1,3 @@
-
-
 package org.apache.ignite.console.agent.rest;
 
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
@@ -19,7 +17,9 @@ import javax.script.ScriptException;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.internal.plugin.IgniteVertxPlugin;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.apache.tinkerpop.gremlin.driver.Client;
 import org.apache.tinkerpop.gremlin.driver.Cluster;
@@ -49,10 +49,10 @@ public class GremlinExecutor implements AutoCloseable {
     
     /** */
     private final GremlinGroovyScriptEngine engine;
-    
-    TypeSerializerRegistry typeSerializerRegistry;
-    
-    GraphBinaryMessageSerializerV1 gbSerializer;
+
+	private TypeSerializerRegistry typeSerializerRegistry;
+
+	private GraphBinaryMessageSerializerV1 gbSerializer;
     
     private String gremlinAddr = "localhost";
     private int gremlinPort = 8182;
@@ -391,16 +391,28 @@ public class GremlinExecutor implements AutoCloseable {
         	res.put("error",(String)null);
         	
         	if(!this.prevURL.equals(clusterId) || this.client.isClosing()) {
-        		
+				try {
+					Ignite ignite = Ignition.ignite(context.get("graphName").toString());
+					if (ignite != null) {
+						Map<String, Object> attrs = ignite.cluster().localNode().attributes();
+						if (attrs.containsKey("GremlinServerPluginProvider.tcp.port")) {
+							gremlinPort = Integer.parseInt(attrs.get("GremlinServerPluginProvider.tcp.port").toString());
+						}
+						gremlinAddr = F.first(ignite.cluster().localNode().addresses());
+					}
+				}
+				catch (Exception e){
+					log.warning("Gremlin server running in remote. Use cfg.gremlinPort.",e);
+				}
+
         		Cluster cluster = Cluster.build()
-        	    	    .addContactPoint(gremlinAddr)
-        	    	    .port(gremlinPort)
-        	    	    .serializer(gbSerializer)
-        	    	    .maxConnectionPoolSize(4)
-        	    	    .maxInProcessPerConnection(1)
-        	    	    .maxSimultaneousUsagePerConnection(4)
-        	    	    .workerPoolSize(8)        	    	   
-        	    	    .create();
+					.addContactPoint(gremlinAddr)
+					.port(gremlinPort)
+					.serializer(gbSerializer)
+					.maxConnectionPoolSize(4)
+					.maxInProcessPerConnection(1)
+					.workerPoolSize(8)
+					.create();
                 	
                 this.client = cluster.connect();
         		
@@ -408,8 +420,7 @@ public class GremlinExecutor implements AutoCloseable {
         		
         	}
         	
-        	
-        	ResultSet result = client.submit(code,context);
+        	ResultSet result = this.client.submit(code,context);
 
         	JsonObject data = parseResponse(result, clusterId, params);
         	long end = System.currentTimeMillis();
@@ -421,7 +432,7 @@ public class GremlinExecutor implements AutoCloseable {
         }
         catch (Exception e) {           
             return RestResult.fail(STATUS_FAILED, "Failed to execute Groovy command [code=" +
-                    code + ", msg=" + e.getCause().getMessage() + "]");
+                    code + ", msg=" + e.getMessage() + "]");
         }
     }
     
@@ -454,7 +465,7 @@ public class GremlinExecutor implements AutoCloseable {
         }
         catch (ScriptException e) {           
             return RestResult.fail(STATUS_FAILED, "Failed to execute Groovy command [code=" +
-                    code + ", msg=" + e.getCause().getMessage() + "]");
+                    code + ", msg=" + e.getMessage() + "]");
         }
     }
 }

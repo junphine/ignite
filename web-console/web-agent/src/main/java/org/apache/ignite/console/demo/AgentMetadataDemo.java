@@ -70,7 +70,7 @@ public class AgentMetadataDemo {
                     Class driverCls = Class.forName("org.h2.Driver");
                     driver = (Driver)driverCls.getDeclaredConstructor().newInstance();
                 }catch (Exception e){
-                    Class driverCls = Class.forName("shared.org.h2.Driver");
+                    Class driverCls = Class.forName("shaded.org.h2.Driver");
                     driver = (Driver)driverCls.getDeclaredConstructor().newInstance();
                 }
 
@@ -92,7 +92,7 @@ public class AgentMetadataDemo {
                 }
                 catch (Exception e){
                     try {
-                        Class<?> runScriptClass = Class.forName("shared.org.h2.tools.RunScript");
+                        Class<?> runScriptClass = Class.forName("shaded.org.h2.tools.RunScript");
                         Method executeMethod = runScriptClass.getMethod(
                                 "execute", Connection.class, Reader.class);
                         executeMethod.invoke(null, conn, reader);   // 静态方法，第一个参数传 null

@@ -1,0 +1,99 @@
+{
+  "id": "fde9438c-7149-42a4-89de-c7d85a9350e6",
+  "caches": [
+    "4495fd74-f33c-43d5-8312-eba2113e48a6"
+  ],
+  "generatePojo": true,
+  "keyType": "Long",
+  "valueType": "com.lr.drupal.model.UcZones",
+  "queryMetadata": "Configuration",
+  "databaseSchema": "drupal_user_db",
+  "databaseTable": "uc_zones",
+  "fields": [
+    {
+      "name": "zoneId",
+      "className": "Long"
+    },
+    {
+      "name": "zoneCountryId",
+      "className": "Long"
+    },
+    {
+      "name": "zoneCode",
+      "className": "String"
+    },
+    {
+      "name": "zoneName",
+      "className": "String"
+    }
+  ],
+  "queryKeyFields": [
+    "zoneId"
+  ],
+  "indexes": [
+    {
+      "name": "uc_zones_zone_code",
+      "indexType": "SORTED",
+      "fields": [
+        {
+          "name": "zoneCode",
+          "direction": false
+        }
+      ]
+    },
+    {
+      "name": "uc_zones_zone_country_id",
+      "indexType": "SORTED",
+      "fields": [
+        {
+          "name": "zoneCountryId",
+          "direction": false
+        }
+      ]
+    },
+    {
+      "name": "zone_country_id",
+      "indexType": "SORTED",
+      "fields": [
+        {
+          "name": "zoneCountryId",
+          "direction": false
+        }
+      ]
+    }
+  ],
+  "keyFields": [
+    {
+      "databaseFieldName": "zone_id",
+      "databaseFieldType": "INTEGER",
+      "javaType": "Long",
+      "javaFieldName": "zoneId",
+      "javaFieldType": "long"
+    }
+  ],
+  "aliases": [],
+  "valueFields": [
+    {
+      "databaseFieldName": "zone_country_id",
+      "databaseFieldType": "INTEGER",
+      "javaType": "Long",
+      "javaFieldName": "zoneCountryId",
+      "javaFieldType": "long"
+    },
+    {
+      "databaseFieldName": "zone_code",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "zoneCode",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "zone_name",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "zoneName",
+      "javaFieldType": "String"
+    }
+  ],
+  "keyFieldName": "zoneId"
+}

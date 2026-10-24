@@ -1,0 +1,6 @@
+{
+  "class": "org.apache.ignite.internal.visor.cache.VisorCacheNodesTaskArg",
+  "fields": [
+    {"order": 0, "type": "java.lang.String", "name": "cacheName"}
+  ]
+}

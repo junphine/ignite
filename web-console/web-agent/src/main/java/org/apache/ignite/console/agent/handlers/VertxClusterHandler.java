@@ -121,8 +121,7 @@ public class VertxClusterHandler implements ClusterHandler{
                 if (cfg.disableVertx())
                     return RestResult.fail(404, "Vertx disabled by administrator.");
                 
-                
-                lastErrors.clear();
+                lastErrors.remove(clusterName);
 				IgniteVertxPlugin vertxPlugin = clusterVertxMap.get(clusterName);
                 if (vertxPlugin==null) {
 					vertxPlugin = startVertxCluster(clusterName,cfg);
@@ -130,7 +129,7 @@ public class VertxClusterHandler implements ClusterHandler{
 
                 try {
         			// Gremlin Query
-            		Ignite ignite = Ignition.ignite(clusterName);
+					Ignite ignite = Ignition.ignite(clusterName);
             		return gremlinExecutor.execRequest(ignite, vertxPlugin, clusterId, params);
         		}
         		catch(Exception e) {

@@ -63,6 +63,7 @@ import org.apache.ignite.internal.processors.odbc.ClientSessionOutboundQueueLimi
 
 import org.apache.ignite.internal.processors.odbc.OdbcEscapeSequenceSelfTest;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtilsTest;
+import org.apache.ignite.internal.processors.query.NoQueryEngineNodeTest;
 import org.apache.ignite.internal.processors.rollingupgrade.CoreVersionRollingUpgradeTest;
 import org.apache.ignite.internal.processors.rollingupgrade.PluginVersionRollingUpgradeTest;
 import org.apache.ignite.internal.processors.rollingupgrade.feature.IgniteFeatureSetTest;
@@ -163,6 +164,7 @@ import org.junit.runners.Suite;
     GridIoManagerOrderedUnmarshalFailureTest.class,
     MessageUnmarshalOnceCheckTest.class,
     GridCacheQueryResponseUnmarshalTest.class,
+    NoQueryEngineNodeTest.class,
     ErrorMessageSelfTest.class,
     DefaultEnumMapperTest.class,
     IgniteDataTransferObjectProcessorTest.class,

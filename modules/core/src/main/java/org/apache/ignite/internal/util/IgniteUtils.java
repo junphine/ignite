@@ -125,7 +125,6 @@ import java.util.stream.Collectors;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 import javax.management.DynamicMBean;
 import javax.management.JMException;
@@ -939,7 +938,10 @@ public abstract class IgniteUtils extends CommonUtils {
 
         ThreadInfo threadInfo = mxBean.getThreadInfo(threadId, Integer.MAX_VALUE);
 
-        printThreadInfo(threadInfo, sb, Collections.<Long>emptySet());
+        if (threadInfo == null)
+            sb.a("Thread [id=").a(threadId).a("] is not alive or is a virtual thread").a(NL);
+        else
+            printThreadInfo(threadInfo, sb, Collections.<Long>emptySet());
     }
 
     /**
@@ -2233,7 +2235,7 @@ public abstract class IgniteUtils extends CommonUtils {
     }
 
     /**
-     * Copy source file (or folder) to destination file (or folder). Supported source & destination:
+     * Copy source file (or folder) to destination file (or folder). Supported source and destination:
      * <ul>
      * <li>File to File</li>
      * <li>File to Folder</li>
@@ -6310,32 +6312,6 @@ public abstract class IgniteUtils extends CommonUtils {
         assert in != null;
 
         try {
-            return marsh.unmarshal(in, clsLdr);
-        }
-        catch (IgniteCheckedException e) {
-            throw e;
-        }
-        catch (Exception e) {
-            throw new IgniteCheckedException(e);
-        }
-    }
-
-    /**
-     * @param marsh Marshaller.
-     * @param zipBytes Zip-compressed bytes.
-     * @param clsLdr Class loader to use.
-     * @return Unmarshalled object.
-     * @throws IgniteCheckedException
-     */
-    public static <T> T unmarshalZip(Marshaller marsh, byte[] zipBytes, @Nullable ClassLoader clsLdr) throws IgniteCheckedException {
-        assert marsh != null;
-        assert zipBytes != null;
-
-        try {
-            ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(zipBytes));
-
-            in.getNextEntry();
-
             return marsh.unmarshal(in, clsLdr);
         }
         catch (IgniteCheckedException e) {

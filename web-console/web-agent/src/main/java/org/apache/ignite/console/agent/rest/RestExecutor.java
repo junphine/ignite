@@ -205,7 +205,7 @@ public class RestExecutor implements AutoCloseable {
             return res;
         }
         catch (Exception e) {
-            throw e.getCause();
+			throw e.getCause()!=null?e.getCause():e;
         }
         
     }

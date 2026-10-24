@@ -3,6 +3,7 @@ Copyright 2023 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
+<<<<<<< HEAD
 
 
 This software includes code from IntelliJ IDEA Community Edition
@@ -21,3 +22,5 @@ Ignite Cluster的节点必须使用相同的Instance Name
 
 
 
+=======
+>>>>>>> upstream/master

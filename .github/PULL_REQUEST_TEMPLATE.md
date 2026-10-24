@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Thank you for submitting the pull request to the Apache Ignite.
 
 In order to streamline the review of the contribution 
@@ -23,3 +24,30 @@ the `green visa` attached to the JIRA ticket (see tab `PR Check` at [TC.Bot - In
 - [Apache Ignite Teamcity Bot](https://cwiki.apache.org/confluence/display/IGNITE/Apache+Ignite+Teamcity+Bot)
 
 If you need any help, please email dev@ignite.apache.org or ask anу advice on http://asf.slack.com _#ignite_ channel.
+=======
+Thank you for submitting the pull request to the Apache Ignite.
+
+In order to streamline the review of the contribution 
+we ask you to ensure the following steps have been taken:
+
+### The Contribution Checklist
+- [ ] There is a single JIRA ticket related to the pull request. 
+- [ ] The web-link to the pull request is attached to the JIRA ticket.
+- [ ] The JIRA ticket has the _Patch Available_ state.
+- [ ] The pull request body describes changes that have been made. 
+The description explains _WHAT_ and _WHY_ was made instead of _HOW_.
+- [ ] The pull request title is treated as the final commit message. 
+The following pattern must be used: `IGNITE-XXXX Change summary` where `XXXX` - number of JIRA issue.
+- [ ] A reviewer has been mentioned through the JIRA comments 
+(see [the Maintainers list](https://cwiki.apache.org/confluence/display/IGNITE/How+to+Contribute#HowtoContribute-ReviewProcessandMaintainers)) 
+- [ ] The pull request has been checked by the Teamcity Bot and 
+the `green visa` attached to the JIRA ticket (see tab `PR Check` at [TC.Bot - Instance 1](https://tcbot2.sbt-ignite-dev.ru/prs.html) or [TC.Bot - Instance 2](https://mtcga.gridgain.com/prs.html))
+
+### Notes
+- [How to Contribute](https://cwiki.apache.org/confluence/display/IGNITE/How+to+Contribute)
+- [Coding abbreviation rules](https://cwiki.apache.org/confluence/display/IGNITE/Abbreviation+Rules)
+- [Coding Guidelines](https://cwiki.apache.org/confluence/display/IGNITE/Coding+Guidelines)
+- [Apache Ignite Teamcity Bot](https://cwiki.apache.org/confluence/display/IGNITE/Apache+Ignite+Teamcity+Bot)
+
+If you need any help, please email dev@ignite.apache.org or ask any advice on https://the-asf.slack.com _#ignite_ channel.
+>>>>>>> upstream/master

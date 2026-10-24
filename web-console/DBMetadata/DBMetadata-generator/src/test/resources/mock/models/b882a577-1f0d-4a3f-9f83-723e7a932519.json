@@ -1,0 +1,254 @@
+{
+  "id": "b882a577-1f0d-4a3f-9f83-723e7a932519",
+  "generatePojo": true,
+  "caches": [
+    "e4074853-bb86-45e9-aece-3abe172d57ca"
+  ],
+  "queryKeyFields": [
+    "uid"
+  ],
+  "queryMetadata": "Configuration",
+  "keyType": "Integer",
+  "valueType": "com.lr.drupal.model.Users",
+  "databaseSchema": "drupal_user_db",
+  "databaseTable": "users",
+  "fields": [
+    {
+      "name": "uid",
+      "className": "Integer",
+      "comment": "用户Id"
+    },
+    {
+      "name": "name",
+      "className": "String"
+    },
+    {
+      "name": "pass",
+      "className": "String"
+    },
+    {
+      "name": "mail",
+      "className": "String"
+    },
+    {
+      "name": "mode",
+      "className": "Byte"
+    },
+    {
+      "name": "sort",
+      "className": "Byte"
+    },
+    {
+      "name": "threshold",
+      "className": "Byte"
+    },
+    {
+      "name": "theme",
+      "className": "String"
+    },
+    {
+      "name": "signature",
+      "className": "String"
+    },
+    {
+      "name": "created",
+      "className": "Integer"
+    },
+    {
+      "name": "access",
+      "className": "Integer"
+    },
+    {
+      "name": "login",
+      "className": "Integer"
+    },
+    {
+      "name": "status",
+      "className": "Byte"
+    },
+    {
+      "name": "timezone",
+      "className": "String"
+    },
+    {
+      "name": "language",
+      "className": "String"
+    },
+    {
+      "name": "picture",
+      "className": "String"
+    },
+    {
+      "name": "init",
+      "className": "String"
+    },
+    {
+      "name": "data",
+      "className": "String"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "name",
+      "indexType": "SORTED",
+      "fields": [
+        {
+          "name": "name",
+          "direction": false
+        }
+      ]
+    },
+    {
+      "name": "access",
+      "indexType": "SORTED",
+      "fields": [
+        {
+          "name": "access",
+          "direction": false
+        }
+      ]
+    },
+    {
+      "name": "mail",
+      "indexType": "SORTED",
+      "fields": [
+        {
+          "name": "mail",
+          "direction": false
+        }
+      ]
+    }
+  ],
+  "keyFields": [
+    {
+      "databaseFieldName": "uid",
+      "databaseFieldType": "INTEGER",
+      "javaType": "Long",
+      "javaFieldName": "uid",
+      "javaFieldType": "long"
+    }
+  ],
+  "aliases": [],
+  "valueFields": [
+    {
+      "databaseFieldName": "name",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "name",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "pass",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "pass",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "mail",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "mail",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "mode",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "mode",
+      "javaFieldType": "byte"
+    },
+    {
+      "databaseFieldName": "sort",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "sort",
+      "javaFieldType": "Byte"
+    },
+    {
+      "databaseFieldName": "threshold",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "threshold",
+      "javaFieldType": "Byte"
+    },
+    {
+      "databaseFieldName": "theme",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "theme",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "signature",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "signature",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "created",
+      "databaseFieldType": "INTEGER",
+      "javaType": "Integer",
+      "javaFieldName": "created",
+      "javaFieldType": "int"
+    },
+    {
+      "databaseFieldName": "access",
+      "databaseFieldType": "INTEGER",
+      "javaType": "Integer",
+      "javaFieldName": "access",
+      "javaFieldType": "int"
+    },
+    {
+      "databaseFieldName": "login",
+      "databaseFieldType": "INTEGER",
+      "javaType": "Integer",
+      "javaFieldName": "login",
+      "javaFieldType": "int"
+    },
+    {
+      "databaseFieldName": "status",
+      "databaseFieldType": "TINYINT",
+      "javaType": "Byte",
+      "javaFieldName": "status",
+      "javaFieldType": "byte"
+    },
+    {
+      "databaseFieldName": "timezone",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "timezone",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "language",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "language",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "picture",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "picture",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "init",
+      "databaseFieldType": "VARCHAR",
+      "javaType": "String",
+      "javaFieldName": "init",
+      "javaFieldType": "String"
+    },
+    {
+      "databaseFieldName": "data",
+      "databaseFieldType": "LONGVARCHAR",
+      "javaType": "String",
+      "javaFieldName": "data",
+      "javaFieldType": "String"
+    }
+  ],
+  "keyFieldName": "uid"
+}
