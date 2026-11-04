@@ -493,12 +493,15 @@ public class IgfsDatasetPersistenceProvider {
 			return null;
 		}	
 		if(file.isDirectory()) {
+			if(!objectKey.endsWith("/")){
+				return null;
+			}
 			return getFolderMetadata(file,bucketName);
 		}
 		return getObjectMetadata(file,bucketName);
 	}
 	
-	public List<S3Object> getObjectsAndMetadata(String bucketName, String s3KeyPrefix) {		
+	public List<S3Object> getObjectsAndMetadata(String bucketName, String s3KeyPrefix,int maxKeys) {
 		IgniteFileSystem fs = fs(bucketName);
 		String key = getDatasetPath(bucketName,s3KeyPrefix==null? "": s3KeyPrefix,null);
 		IgfsPath root = new IgfsPath(key);
@@ -506,6 +509,7 @@ public class IgfsDatasetPersistenceProvider {
 		if(!fs.exists(root)) {
 			return flows;
 		}
+		int count = 0;
 		Collection<IgfsFile> datasets = fs.listFiles(root);
 		for(IgfsFile dataset: datasets) {
 			S3Object flow = new S3Object();
@@ -520,6 +524,10 @@ public class IgfsDatasetPersistenceProvider {
 				flow.setMetadata(getFolderMetadata(dataset,bucketName));
 			}
 			flows.add(flow);
+			count++;
+			if(maxKeys>0 && count>=maxKeys){
+				break;
+			}
 		}		
 		return flows;
 	}

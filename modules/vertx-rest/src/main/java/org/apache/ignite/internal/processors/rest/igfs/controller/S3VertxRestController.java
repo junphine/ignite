@@ -40,6 +40,7 @@ import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import static org.apache.ignite.internal.processors.rest.igfs.util.CommonUtil.removeQuery;
@@ -134,7 +135,7 @@ public class S3VertxRestController extends VertxInstanceAware{
     // Bucket相关接口
     @PutMapping("/:bucketName")
     public ResponseEntity<String> createBucket(@PathVariable String bucketName,HttpServerRequest request) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
         if (s3Service().headBucket(bucketName)) {
             return ResponseEntity.status(409).body("BucketAlreadyExists");
         }
@@ -210,7 +211,7 @@ public class S3VertxRestController extends VertxInstanceAware{
 
     @RequestMapping(value = "/:bucketName", method = RequestMethod.HEAD)
     public ResponseEntity<Object> headBucket(@PathVariable(value = "bucketName") String bucketName,HttpServerResponse response) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
         if (s3Service().headBucket(bucketName)) {
             return ResponseEntity.ok().build();
         } else {
@@ -220,7 +221,7 @@ public class S3VertxRestController extends VertxInstanceAware{
 
     @DeleteMapping("/:bucketName")
     public ResponseEntity<String> deleteBucket(@PathVariable String bucketName) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
         s3Service().deleteBucket(bucketName);
         return ResponseEntity.noContent().build();
     }
@@ -228,16 +229,17 @@ public class S3VertxRestController extends VertxInstanceAware{
     // List Object相关接口
     @GetMapping("/:bucketName")
     public void listObjects(@PathVariable String bucketName, HttpServerRequest request,HttpServerResponse response) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");        
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);        
         String prefix = ConvertOp.convert2String(request.getParam("prefix"));
+        int max_keys = ConvertOp.convert2Int(request.getParam("max-keys"));
         boolean delimiter = request.getParam("delimiter")!=null;
-        _listObjects(bucketName,prefix,delimiter,response);
+        _listObjects(bucketName,prefix,delimiter,max_keys,response);
     }
     
-    private void _listObjects(@PathVariable String bucketName, String prefix, boolean delimiter,HttpServerResponse response) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");        
+    private void _listObjects(@PathVariable String bucketName, String prefix, boolean delimiter,int max_keys, HttpServerResponse response) throws Exception {
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);        
         
-        List<S3Object> s3ObjectList = s3Service().listObjects(bucketName, prefix);
+        List<S3Object> s3ObjectList = s3Service().listObjects(bucketName, prefix, max_keys);
 
         DocumentBuilder builder = documentFactory.newDocumentBuilder();
 
@@ -272,7 +274,12 @@ public class S3VertxRestController extends VertxInstanceAware{
 
         // MaxKeys 元素
         Element maxKeys = doc.createElement("MaxKeys");
-        maxKeys.setTextContent("10000");
+        if(max_keys>0){
+            maxKeys.setTextContent(String.valueOf(max_keys));
+        }
+        else {
+            maxKeys.setTextContent("10000");
+        }
         root.appendChild(maxKeys);
 
         // KeyCount 元素
@@ -349,8 +356,8 @@ public class S3VertxRestController extends VertxInstanceAware{
 
     @RequestMapping(value = "/:bucketName/*", method = RequestMethod.HEAD)
     public void headObject(@PathVariable String bucketName, HttpServerRequest request, HttpServerResponse response) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
-        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
+        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), StandardCharsets.UTF_8);
         
         String objectKey = pageUrl.replace(contextPath + bucketName + "/", "");
         ObjectMetadata metadata = s3Service().headObject(bucketName, objectKey);
@@ -361,7 +368,7 @@ public class S3VertxRestController extends VertxInstanceAware{
         	HashMap<String, String> headInfo = new HashMap<>();
         	
             if(metadata.getContentLength()>0 && !metadata.getFileName().endsWith("/")) {
-            	headInfo.put("Content-Disposition", "filename=" + URLEncoder.encode(metadata.getFileName(), "utf-8"));
+            	headInfo.put("Content-Disposition", "filename=" + URLEncoder.encode(metadata.getFileName(), StandardCharsets.UTF_8));
             	headInfo.put("Content-Length", ""+metadata.getContentLength());
             }
             headInfo.put("Content-Type", metadata.getContentType());
@@ -378,13 +385,13 @@ public class S3VertxRestController extends VertxInstanceAware{
 
     @PutMapping("/:bucketName/*")
     public ResponseEntity<String> putObject(@PathVariable String bucketName, RoutingContext rc, HttpServerRequest request,HttpServerResponse response) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
-        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
+        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), StandardCharsets.UTF_8);
         
         String objectKey = pageUrl.replace(contextPath + bucketName + "/", "");
         String copySource = request.getHeader(HEADER_X_AMZ_COPY_SOURCE);
         if(copySource!=null) {
-        	copySource = URLDecoder.decode(copySource, "utf-8");
+        	copySource = URLDecoder.decode(copySource, StandardCharsets.UTF_8);
         }
         String copyOption = request.getHeader(HEADER_X_AMZ_COPY_OPTION);
         
@@ -400,7 +407,7 @@ public class S3VertxRestController extends VertxInstanceAware{
             InputStream inputStream = new ByteArrayInputStream(bytes);
         	s3Service().putObject(bucketName, objectKey, inputStream, userMeta);
         	ObjectMetadata metadata = s3Service().headObject(bucketName, objectKey);
-            response.putHeader("Content-Disposition", "filename=" + URLEncoder.encode(metadata.getFileName(), "utf-8"));            
+            response.putHeader("Content-Disposition", "filename=" + URLEncoder.encode(metadata.getFileName(), StandardCharsets.UTF_8));            
             response.putHeader("Last-Modified", DateUtil.getDateGMTFormat(metadata.getLastModified()));                
             response.putHeader("ETag","\"" + metadata.getETag() + "\"");            
             return ResponseEntity.ok().build();
@@ -445,8 +452,8 @@ public class S3VertxRestController extends VertxInstanceAware{
     public void getOrListObject(@PathVariable String bucketName, 
     		@RequestHeader(value = RANGE, required = false) String rangeStr,
     		HttpServerRequest request, HttpServerResponse response) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
-        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
+        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), StandardCharsets.UTF_8);
         
         String objectKey = pageUrl.replace(contextPath + bucketName + "/", "");
         ObjectMetadata metadata = s3Service().headObject(bucketName, objectKey);
@@ -456,7 +463,8 @@ public class S3VertxRestController extends VertxInstanceAware{
         } 
         else if(metadata.getContentLength()==0 && metadata.getFileName().endsWith("/")) {
         	boolean delimiter = request.getParam("delimiter")!=null;
-        	_listObjects(bucketName,objectKey,delimiter,response);
+            int max_keys = ConvertOp.convert2Int(request.getParam("max-keys"));
+        	_listObjects(bucketName,objectKey,delimiter,max_keys,response);
         }
         else {        	
         	Range range = null;
@@ -481,7 +489,7 @@ public class S3VertxRestController extends VertxInstanceAware{
         	
         	S3ObjectInputStream objectStream = s3Service().getObject(bucketName, objectKey, range);        	
         	
-        	response.putHeader("Content-Disposition", "filename=" + URLEncoder.encode(metadata.getFileName(), "utf-8"));            
+        	response.putHeader("Content-Disposition", "filename=" + URLEncoder.encode(metadata.getFileName(), StandardCharsets.UTF_8));            
             response.putHeader("Last-Modified", DateUtil.getDateGMTFormat(metadata.getLastModified()));                
             response.putHeader("ETag","\""+metadata.getETag()+"\"");
             if(metadata.getContentEncoding()!=null)
@@ -530,8 +538,8 @@ public class S3VertxRestController extends VertxInstanceAware{
 
     @DeleteMapping("/:bucketName/*")
     public ResponseEntity<String> deleteObject(@PathVariable String bucketName, HttpServerRequest request) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
-        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
+        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), StandardCharsets.UTF_8);
         if (pageUrl.indexOf("\\?") >= 0) {
             pageUrl = pageUrl.split("\\?")[0];
         }
@@ -566,8 +574,8 @@ public class S3VertxRestController extends VertxInstanceAware{
     public ResponseEntity<String> createMultipartUpload(@PathVariable String bucketName, RoutingContext rc, HttpServerRequest request) throws Exception {
     	Map<String,String> userMeta = getUserMetadata(request);
     	userMeta.put("ownerName", CommonUtil.getCurrentUser(rc));
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
-        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
+        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), StandardCharsets.UTF_8);
         
         String objectKey = pageUrl.replace(contextPath + bucketName + "/", "");
         InitiateMultipartUploadResult result = s3Service().initiateMultipartUpload(bucketName, objectKey, userMeta);
@@ -604,8 +612,8 @@ public class S3VertxRestController extends VertxInstanceAware{
 
     @PutMapping(value = "/:bucketName/*", params = {"partNumber", "uploadId"})
     public ResponseEntity<String> uploadPart(@PathVariable String bucketName, RoutingContext rc, HttpServerRequest request, HttpServerResponse response) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
-        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
+        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), StandardCharsets.UTF_8);
         
         String contentMD5 = request.getHeader("Content-MD5");
         
@@ -625,8 +633,8 @@ public class S3VertxRestController extends VertxInstanceAware{
 
    
     public ResponseEntity<String> completeMultipartUpload(@PathVariable String bucketName, RoutingContext rc, HttpServerRequest request) throws Exception {
-        bucketName = URLDecoder.decode(bucketName, "utf-8");
-        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), "utf-8");
+        bucketName = URLDecoder.decode(bucketName, StandardCharsets.UTF_8);
+        String pageUrl = URLDecoder.decode(removeQuery(request.uri()), StandardCharsets.UTF_8);
         
         String objectKey = pageUrl.replace(contextPath + bucketName + "/", "");
         String uploadId = request.getParam("uploadId");

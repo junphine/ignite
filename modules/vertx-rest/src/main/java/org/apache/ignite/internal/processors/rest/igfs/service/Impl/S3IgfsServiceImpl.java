@@ -67,7 +67,7 @@ public class S3IgfsServiceImpl implements S3Service {
     }
 
     @Override
-    public List<S3Object> listObjects(String bucketName, String prefix) {
+    public List<S3Object> listObjects(String bucketName, String prefix, int maxKeys) {
         if (StringUtils.isEmpty(prefix)) {
             prefix = "";
         } else {
@@ -75,7 +75,7 @@ public class S3IgfsServiceImpl implements S3Service {
                 prefix = prefix.substring(1);
             }
         }
-        List<S3Object> s3ObjectList = provider.getObjectsAndMetadata(bucketName,prefix);     
+        List<S3Object> s3ObjectList = provider.getObjectsAndMetadata(bucketName,prefix,maxKeys);
         return s3ObjectList;
     }
 

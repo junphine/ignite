@@ -84,7 +84,7 @@ public class S3LocalFileServiceImpl implements S3Service {
     }
 
     @Override
-    public List<S3Object> listObjects(String bucketName, String prefix) {
+    public List<S3Object> listObjects(String bucketName, String prefix, int maxKeys) {
         if (StringUtils.isEmpty(prefix)) {
             prefix = "/";
         } else {
@@ -96,6 +96,7 @@ public class S3LocalFileServiceImpl implements S3Service {
         String dirPath = systemConfig.getDataPath() + bucketName + prefix;
         File dir = new File(dirPath);
         File[] fileList = dir.listFiles();
+        int count = 0;
         for (File file : fileList) {
             S3Object s3Object = new S3Object();
             s3Object.setBucketName(bucketName);
@@ -111,6 +112,10 @@ public class S3LocalFileServiceImpl implements S3Service {
             }
             s3Object.setMetadata(objectMetadata);
             s3ObjectList.add(s3Object);
+            count++;
+            if(maxKeys>0 && count>=maxKeys){
+                break;
+            }
         }
         return s3ObjectList;
     }

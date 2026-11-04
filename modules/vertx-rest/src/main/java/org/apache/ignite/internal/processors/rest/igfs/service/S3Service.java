@@ -18,7 +18,11 @@ public interface S3Service {
     
     Boolean objectIsFolder(String bucketName, String prefix);
 
-    List<S3Object> listObjects(String bucketName, String prefix);
+    default List<S3Object> listObjects(String bucketName, String prefix){
+        return listObjects(bucketName,prefix,0);
+    }
+
+    List<S3Object> listObjects(String bucketName, String prefix,int maxKey);
 
     ObjectMetadata headObject(String bucketName, String objectKey);
 
