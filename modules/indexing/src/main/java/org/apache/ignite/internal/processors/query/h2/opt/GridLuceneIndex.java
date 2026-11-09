@@ -62,7 +62,6 @@ public class GridLuceneIndex implements AutoCloseable {
     public static final String VAL_STR_FIELD_NAME = "_TEXT"; // modify@byron "_gg_val_str__";  
     
     public static final int DEAULT_LIMIT = 1200;
-    
     /** */
     private final String cacheName;
 
@@ -92,7 +91,7 @@ public class GridLuceneIndex implements AutoCloseable {
         this.ctx = ctx;
         this.cacheName = cacheName;
         this.type = type;       
-        FullTextLucene.ctx = ctx;
+
         try {
 			indexAccess = LuceneIndexAccess.getIndexAccess(ctx, cacheName);
 			init(type);

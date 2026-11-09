@@ -17,12 +17,8 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.TreeSet;
+import java.util.*;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -98,8 +94,27 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
 		return queryIndex;
 	}
 
-	public void setQueryIndex(QueryIndex queryIndex) {
-		this.queryIndex = queryIndex;
+	public void setQueryIndex(QueryIndex queryIndex) throws IgniteCheckedException {
+        this.queryIndex = queryIndex;
+        var it = this.fields.iterator();
+        List<String> keys = new ArrayList<>();
+        while(it.hasNext()){
+            var field = it.next();
+            keys.add(field.getKey());
+            if(!queryIndex.getFields().containsKey(field.getKey())){
+                it.remove();
+            }
+        }
+        if(this.fields.size()<queryIndex.getFields().size()){
+            int num = 0;
+            for(Map.Entry<String,Boolean> f: queryIndex.getFields().entrySet()){
+                if(!keys.contains(f.getKey())){
+                    addField(f.getKey(),num,f.getValue());
+                }
+                num++;
+            }
+
+        }
 	}
 	
     /**

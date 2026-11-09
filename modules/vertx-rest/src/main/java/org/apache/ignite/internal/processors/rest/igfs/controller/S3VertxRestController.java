@@ -1,5 +1,9 @@
 package org.apache.ignite.internal.processors.rest.igfs.controller;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.EmptyByteBuf;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -69,6 +73,7 @@ public class S3VertxRestController extends VertxInstanceAware{
 	
 	private static final String contextPath = "/s3/";
     public static final byte[] BYTES = new byte[0];
+    public static final ByteBuf EMPTY = new EmptyByteBuf(ByteBufAllocator.DEFAULT);
 
     // 创建 DocumentBuilderFactory 和 DocumentBuilder
     private DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
@@ -400,11 +405,11 @@ public class S3VertxRestController extends VertxInstanceAware{
             Map<String,String> userMeta = getUserMetadata(request);
         	userMeta.put("ownerName", CommonUtil.getCurrentUser(rc));
         	Buffer buffer = rc.body().buffer();
-            byte[] bytes = BYTES;
+            ByteBuf bytes = EMPTY;
             if(buffer!=null)
-                bytes = buffer.getBytes();
+                bytes = buffer.getByteBuf();
 
-            InputStream inputStream = new ByteArrayInputStream(bytes);
+            InputStream inputStream = new ByteBufInputStream(bytes);
         	s3Service().putObject(bucketName, objectKey, inputStream, userMeta);
         	ObjectMetadata metadata = s3Service().headObject(bucketName, objectKey);
             response.putHeader("Content-Disposition", "filename=" + URLEncoder.encode(metadata.getFileName(), StandardCharsets.UTF_8));            
@@ -621,11 +626,11 @@ public class S3VertxRestController extends VertxInstanceAware{
         int partNumber = ConvertOp.convert2Int(request.getParam("partNumber"));
         String uploadId = request.getParam("uploadId");
         Buffer buffer = rc.body().buffer();
-        byte[] bytes = BYTES;
+        ByteBuf bytes = EMPTY;
         if(buffer!=null)
-            bytes = buffer.getBytes();
+            bytes = buffer.getByteBuf();
 
-        InputStream inputStream = new ByteArrayInputStream(bytes);
+        InputStream inputStream = new ByteBufInputStream(bytes);
         PartETag eTag = s3Service().uploadPart(bucketName, objectKey, partNumber, uploadId, inputStream);
         response.putHeader("ETag", "\""+eTag.geteTag()+"\"");
         return ResponseEntity.ok().build();
@@ -641,13 +646,11 @@ public class S3VertxRestController extends VertxInstanceAware{
         List<PartETag> partETags = new ArrayList<>();
 
         Buffer buffer = rc.body().buffer();
-        byte[] bytes = BYTES;
+        ByteBuf bytes = EMPTY;
         if(buffer!=null)
-            bytes = buffer.getBytes();
+            bytes = buffer.getByteBuf();
 
-        InputStream inputStream = new ByteArrayInputStream(bytes);
-
-
+        InputStream inputStream = new ByteBufInputStream(bytes);
         DocumentBuilder builder = documentFactory.newDocumentBuilder();
         Document bodyDoc = builder.parse(inputStream);
 

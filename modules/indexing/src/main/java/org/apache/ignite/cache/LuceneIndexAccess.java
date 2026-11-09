@@ -124,7 +124,6 @@ public class LuceneIndexAccess {
         	this.setCacheName(cacheName);
         }
         else{
-        	FullTextLucene.ctx = ctx;    
         	this.setCacheName(cacheName);
         	this.config.setPersistenceEnabled(ctx.config().getDataStorageConfiguration().getDefaultDataRegionConfiguration().isPersistenceEnabled());
         } 
