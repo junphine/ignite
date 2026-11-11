@@ -234,6 +234,10 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                 span {{ field.name }}
                                 span(ng-if='queryIndex.indexType == "SORTED"')
                                     |  / {{ field.direction ? 'ASC' : 'DESC'}}
+                                span(ng-if='queryIndex.indexType == "FULLTEXT"')
+                                    |  / {{ field.fieldType ? 'Text' : 'Keyword'}}
+                                span(ng-if='queryIndex.indexType == "VECTOR"')
+                                    |  / dimensions:{{ queryIndex.dimensions }}
 
                         list-editable-item-edit(item-name='queryIndex')
                             .pc-form-grid-row
@@ -259,7 +263,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                         placeholder: 'Select index type',
                                         options: '::$ctrl.Models.indexType.values'
                                     })
-                                .pc-form-grid-col-60(ng-if='$ctrl.available("2.3.0")')
+                                .pc-form-grid-col-30(ng-if='queryIndex.indexType == "SORTED"')
                                     +form-field__dropdown({
                                         label: 'Inline size:',
                                         model: `queryIndex.inlineSizeType`,
@@ -276,7 +280,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                         ng-change=`$ctrl.Models.inlineSizeType.onChange(queryIndex)`
                                         ng-model-options='{allowInvalid: true}'
                                     )
-                                .pc-form-grid-col-60(ng-if='$ctrl.available("2.3.0") && queryIndex.inlineSizeType === 1')
+                                .pc-form-grid-col-30(ng-if='queryIndex.inlineSizeType === 1')
                                     form-field-size(
                                         label='Inline size:'
                                         ng-model=`queryIndex.inlineSize`
@@ -304,10 +308,14 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                                 | {{ indexField.name }}
                                                 span(ng-if='queryIndex.indexType === "SORTED"')
                                                     |  / {{ indexField.direction ? "ASC" : "DESC" }}
+                                                span(ng-if='queryIndex.indexType == "FULLTEXT"')
+                                                    |  / {{ indexField.fieldType ? 'Text' : 'Keyword' }}
+                                                span(ng-if='queryIndex.indexType == "VECTOR"')
+                                                    |  / dimensions:{{ queryIndex.dimensions }}
 
                                             list-editable-item-edit(item-name='indexField')
                                                 .pc-form-grid-row
-                                                    .pc-form-grid-col-60
+                                                    .pc-form-grid-col-30
                                                         +form-field__dropdown({
                                                             label: 'Index field:',
                                                             model: 'indexField.name',
@@ -323,7 +331,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                                             ignite-auto-focus
                                                         )
                                                             +form-field__error({ error: 'igniteUnique', message: 'Such field already exists!' })
-                                                    .pc-form-grid-col-60(
+                                                    .pc-form-grid-col-30(
                                                         ng-if='queryIndex.indexType === "SORTED"'
                                                     )
                                                         +form-field__dropdown({
@@ -333,6 +341,28 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                                             required: true,
                                                             options: '::$ctrl.Models.indexSortDirection.values'
                                                         })
+                                                    .pc-form-grid-col-30(
+                                                        ng-if='queryIndex.indexType === "FULLTEXT"'
+                                                    )
+                                                        +form-field__dropdown({
+                                                            label: 'Field type:',
+                                                            model: 'indexField.fieldType',
+                                                            name: '"fieldType"',
+                                                            required: true,
+                                                            options: '::$ctrl.Models.indexFieldType.values'
+                                                        })
+                                                    .pc-form-grid-col-30(
+                                                        ng-if='queryIndex.indexType === "VECTOR"'
+                                                    )
+                                                        +form-field__number({
+                                                            label: 'Dimensions size:',
+                                                            model: 'queryIndex.dimensions',
+                                                            name: '"dimensions"',
+                                                            placeholder: '1024',
+                                                            min: '-1',
+                                                            tip: 'Embedding dimensions'
+                                                        })
+                                                          +form-field__error({error: 'min', message: 'Dimensions size should be greater than 0'})
                                             list-editable-no-items
                                                 list-editable-add-item-button(
                                                     add-item=`$edit($ctrl.Models.addIndexField(queryIndex.fields))`

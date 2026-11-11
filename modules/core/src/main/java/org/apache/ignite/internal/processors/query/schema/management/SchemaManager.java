@@ -623,8 +623,11 @@ public class SchemaManager {
 
         IndexDescriptorFactory factory = idxDescFactory.get(idxDesc.type());
 
-        if (factory == null)
+        if (factory == null) {
+            if(idxDesc.type() == QueryIndexType.VECTOR) // add@byron
+                return;
             throw new IllegalStateException("Not found factory for index type: " + idxDesc.type());
+        }
 
         IndexDescriptor desc = factory.create(ctx, idxDesc, tbl, cacheVisitor);
 

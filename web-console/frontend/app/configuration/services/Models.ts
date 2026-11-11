@@ -32,7 +32,8 @@ export default class Models {
     indexType = {
         values: [
             {label: 'SORTED', value: 'SORTED'},
-            {label: 'FULLTEXT', value: 'FULLTEXT'},           
+            {label: 'FULLTEXT', value: 'FULLTEXT'},
+            {label: 'VECTOR', value: 'VECTOR'},
             {label: 'GEOSPATIAL', value: 'GEOSPATIAL'}
         ]
     };
@@ -86,6 +87,14 @@ export default class Models {
         values: [
             {value: true, label: 'ASC'},
             {value: false, label: 'DESC'}
+        ],
+        default: true
+    };
+
+    indexFieldType = {
+        values: [
+            {value: true, label: 'tokenized'},
+            {value: false, label: 'keyword'},
         ],
         default: true
     };

@@ -1884,13 +1884,26 @@ export default class IgniteConfigurationGenerator {
             }
 
             const indexes = _.map(domain.indexes, (index) => {
-                const bean = new Bean('org.apache.ignite.cache.QueryIndex', 'index', index, cacheDflts.indexes)
+                let queryIndexCls = 'org.apache.ignite.cache.QueryIndex';
+                if (available('2.16.999')){
+                    if(index.indexType=='FULLTEXT')
+                        queryIndexCls = 'org.apache.ignite.cache.FullTextQueryIndex';
+                    if(index.indexType=='VECTOR')
+                        queryIndexCls = 'org.apache.ignite.cache.VectorQueryIndex';
+                }
+
+                const bean = new Bean(queryIndexCls, 'index', index, cacheDflts.indexes)
                     .stringProperty('name')
                     .enumProperty('indexType')
                     .mapProperty('indFlds', 'fields', 'fields', true);
 
                 if (available('2.3.0'))
                     bean.intProperty('inlineSize');
+
+                if (available('2.16.999')){
+                    if(index.indexType=='VECTOR')
+                        bean.intProperty('dimensions');
+                }
 
                 return bean;
             });

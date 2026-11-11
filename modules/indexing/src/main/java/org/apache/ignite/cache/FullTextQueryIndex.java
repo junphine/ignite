@@ -6,6 +6,11 @@ import java.util.LinkedHashMap;
 
 public class FullTextQueryIndex extends QueryIndex {
 	private static final long serialVersionUID = 0L;
+
+	/**
+	 * LinkedHashMap<String, Boolean> fields
+	 * 为true: tokenized field，为false: untokenized field
+	 */
 	
 	private String analyzer;
 

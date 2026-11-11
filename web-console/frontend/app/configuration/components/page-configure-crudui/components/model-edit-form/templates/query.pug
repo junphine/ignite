@@ -259,7 +259,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                         placeholder: 'Select index type',
                                         options: '::$ctrl.Models.indexType.values'
                                     })
-                                .pc-form-grid-col-60(ng-if='$ctrl.available("2.3.0")')
+                                .pc-form-grid-col-30(ng-if='queryIndex.indexType == "SORTED"')
                                     +form-field__dropdown({
                                         label: 'Inline size:',
                                         model: `queryIndex.inlineSizeType`,
@@ -276,7 +276,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                         ng-change=`$ctrl.Models.inlineSizeType.onChange(queryIndex)`
                                         ng-model-options='{allowInvalid: true}'
                                     )
-                                .pc-form-grid-col-60(ng-if='$ctrl.available("2.3.0") && queryIndex.inlineSizeType === 1')
+                                .pc-form-grid-col-30(ng-if='queryIndex.inlineSizeType === 1')
                                     form-field-size(
                                         label='Inline size:'
                                         ng-model=`queryIndex.inlineSize`
@@ -307,7 +307,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
 
                                             list-editable-item-edit(item-name='indexField')
                                                 .pc-form-grid-row
-                                                    .pc-form-grid-col-60
+                                                    .pc-form-grid-col-30
                                                         +form-field__dropdown({
                                                             label: 'Index field:',
                                                             model: 'indexField.name',
@@ -323,7 +323,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                                             ignite-auto-focus
                                                         )
                                                             +form-field__error({ error: 'igniteUnique', message: 'Such field already exists!' })
-                                                    .pc-form-grid-col-60(
+                                                    .pc-form-grid-col-30(
                                                         ng-if='queryIndex.indexType === "SORTED"'
                                                     )
                                                         +form-field__dropdown({
