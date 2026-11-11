@@ -1,5 +1,3 @@
-
-
 import {merge, empty, of, from} from 'rxjs';
 import {mapTo, filter, tap, ignoreElements, exhaustMap, switchMap, map, pluck, withLatestFrom, take, catchError, zip} from 'rxjs/operators';
 import uniq from 'lodash/uniq';
@@ -138,11 +136,11 @@ export default class ConfigEffects {
                     },
                     {
                         type: igfssActionTypes.UPSERT,
-                        items: action.changedItems.igfss
+                        items: action.changedItems.igfss || []
                     },
                     {
                         type: shortIGFSsActionTypes.UPSERT,
-                        items: action.changedItems.igfss
+                        items: action.changedItems.igfss || []
                     },
                     {
                         type: cachesActionTypes.UPSERT,

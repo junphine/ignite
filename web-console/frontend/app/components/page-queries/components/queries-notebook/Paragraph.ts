@@ -68,7 +68,7 @@ export class Paragraph {
         self.queryType = paragraph.queryType || 'SQL_FIELDS';
         self.maxPages = 0;
         self.filter = '';
-        self.useAsDefaultSchema = false;
+        self.useAsDefaultSchema = true;
         self.localQueryMode = false;
         self.csvIsPreparing = false;
         self.scanningInProgress = false;

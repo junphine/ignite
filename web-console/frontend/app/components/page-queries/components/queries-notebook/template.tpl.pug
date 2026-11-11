@@ -479,15 +479,6 @@ mixin paragraph-query
                         no-data
                             label(translate='queries.notebook.queryResult.wrongCachesFilterError')
 
-                    .settings-row
-                        .row(ng-if='displayedCaches.length > 0 && ddlAvailable(paragraph)')
-                            +form-field__checkbox({
-                                label: '{{::"queries.notebook.queryResult.useAsDefaultSchemaInput.label"|translate}}',
-                                model: 'paragraph.useAsDefaultSchema',
-                                name: '"useAsDefaultSchema" + paragraph.id',
-                                tip: '{{::"queries.notebook.queryResult.useAsDefaultSchemaInput.tooltip"|translate}}',
-                                tipOpts: { placement: 'top' }
-                            })
                 .empty-caches(ng-show='caches.length == 0')
                     no-data(handle-cluster-inactive='true')
                         label(translate='queries.notebook.queryResult.noCaches')
@@ -572,15 +563,6 @@ mixin paragraph-gremlin
                         no-data
                             label(translate='queries.notebook.queryResult.wrongCachesFilterError')
 
-                    .settings-row
-                        .row(ng-if='displayedCaches.length > 0 && ddlAvailable(paragraph)')
-                            +form-field__checkbox({
-                                label: '{{::"queries.notebook.queryResult.useAsDefaultSchemaInput.label"|translate}}',
-                                model: 'paragraph.useAsDefaultSchema',
-                                name: '"useAsDefaultSchema" + paragraph.id',
-                                tip: '{{::"queries.notebook.queryResult.useAsDefaultSchemaInput.tooltip"|translate}}',
-                                tipOpts: { placement: 'top' }
-                            })
                 .empty-caches(ng-show='caches.length == 0')
                     no-data(handle-cluster-inactive='true')
                         label(translate='queries.notebook.queryResult.noCaches')

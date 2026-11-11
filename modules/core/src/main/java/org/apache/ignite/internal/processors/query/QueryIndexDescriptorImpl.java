@@ -100,7 +100,7 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
         List<String> keys = new ArrayList<>();
         while(it.hasNext()){
             var field = it.next();
-            keys.add(field.getKey());
+            keys.add(field.getKey().toUpperCase());
             if(!queryIndex.getFields().containsKey(field.getKey())){
                 it.remove();
             }
@@ -108,8 +108,9 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
         if(this.fields.size()<queryIndex.getFields().size()){
             int num = 0;
             for(Map.Entry<String,Boolean> f: queryIndex.getFields().entrySet()){
-                if(!keys.contains(f.getKey())){
-                    addField(f.getKey(),num,f.getValue());
+                String key = f.getKey().toUpperCase();
+                if(!keys.contains(key)){
+                    addField(key,num,f.getValue());
                 }
                 num++;
             }
