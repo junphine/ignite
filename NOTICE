@@ -3,8 +3,6 @@ Copyright 2023 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
-<<<<<<< HEAD
-
 
 This software includes code from IntelliJ IDEA Community Edition
 Copyright (C) JetBrains s.r.o.
@@ -18,9 +16,4 @@ http://search.maven.org/#artifactdetails%7Corg.jetbrains%7Cannotations%7C13.0%7C
 Ignite Cluster的节点必须使用相同的Instance Name
 增加基于Web Agent Console Server的服务发现实现,强烈推荐使用这个服务发现器
 增加了大部分Redis 5.0的指令,包含事务,流指令支持
-
-
-
-
-=======
->>>>>>> upstream/master
+基于Lucene Vector Search 实现向量检索
