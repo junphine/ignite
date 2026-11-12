@@ -28,13 +28,13 @@ Apache Ignite is a distributed database for high-performance computing with in-m
 
 ## Mongodb Backend for Vector Engine
     
-Ignite can be used as a Mongo db server, it is fast and distributed, it supports the mongodb3.6 protocol and most mongdb commands. Be default, if ignite instance name is admin, Ignite will start Mongo server automatic, Other wise, You should add MongoPluginConfiguration in IgniteConfiguration.plugins.
+Ignite can be used as a Mongo DB server, it is fast and distributed, it supports the mongodb4.0 protocol and most mongdb commands. Be default, if ignite instance name is admin, Ignite will start Mongod server automatic, Other wise, You should add MongoPluginConfiguration in IgniteConfiguration.plugins.
 
 It also supports vector search:
 
     ```
     dbname = 'graph'
-    mongo_client = MongoClient("mongodb://127.0.0.1:27018/"+dbname)
+    mongo_client = MongoClient("mongodb://127.0.0.1:27017/"+dbname)
     
     collection = mongo_client[dbname][collection_name]
     
@@ -52,11 +52,13 @@ It also supports vector search:
 
 ## Text Search
 
-Based on the Mongodb protocol, Ignite supports text search, like Mongodb text search.
-
+Based on the Mongodb protocol, Ignite supports text search, like Mongodb text search stage.
+```
+$search: { title: { search: 'Ignite' } }
+```
 
 ## Gremlin Server
-Ignite can be used as a Gremlin server, it is fast and distributed, it supports the gremlin3.5+ protocol and all gremlin step. Be default, if ignite instance name is graph, Ignite will start Gremlin server automatic,Other wise, You should add GremlinPluginConfiguration in IgniteConfiguration.plugins.
+Ignite can be used as a Gremlin server, it is fast and distributed, it supports the gremlin3.7+ protocol and all gremlin step. Be default, if ignite instance name is graph, Ignite will start Gremlin server automatic, Other wise, You should add GremlinPluginConfiguration in IgniteConfiguration.plugins.
 
 	```
 	import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection;
@@ -66,18 +68,18 @@ Ignite can be used as a Gremlin server, it is fast and distributed, it supports 
 
 	g = traversal().withRemote(DriverRemoteConnection.using("localhost", 8182));
 	// addV will create record in ignite [graph]_vertex table
-	g.addV('node').property('id','test2').property('name','测试二').next()
+	g.addV('node').property('id','test2').property('name','name2').next()
 
 	// Ignite extensions:
 	g = traversal(IgniteGraphTraversalSource.class).withRemote(DriverRemoteConnection.using("localhost", 8182))
 	// addDoc will create record in ignite [graph]_test table
-	v1 = g.addDoc('test').property('id','test2').property('name','测试二').next()
+	v1 = g.addDoc('test').property('id','test2').property('name','name2').next()
 	// addIndex set field name as ignite entity index
 	g.addIndex('test','name',false)
 	g.selectQuery('test',null)
 	// use sql to query vertexes
 	g.selectQuery('test',"select count(*) from graph_test ").valueMap().next()
-	g.selectQuery('test',"select count(*) from graph_test where name=? ",'测试二').valueMap().next()
+	g.selectQuery('test',"select count(*) from graph_test where name=? ",'name2').valueMap().next()
 	```
 
 
@@ -146,8 +148,10 @@ IGFS provides APIs to perform the following operations:
 - CRUD (Create, Read, Update, and Delete Files/Directories) file operations
 - Perform MapReduce; it sits on top of Hadoop File system (HDFS) to accelerate Hadoop processing
 - File caching and eviction
+- Haddop HDFS filesystem provider
+- S3 endpoint support when http rest added.
 
-When ignite-rest-http enabled, vistit /filemanger to manager IGFS files.
+When ignite-rest-http enabled, visits /s3/ to access IGFS files.  On admin server visits /filemanger to manager IGFS files.
 
 ## Multi-Tier Storage
 
