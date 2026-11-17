@@ -54,6 +54,14 @@ export default class SqlTypes {
         return this.validIdentifier(s) && !this.isKeyword(s);
     }
 
+    isJdbcBuiltInType(clsName) {
+        if (!clsName || clsName.trim().length === 0)
+            return false;
+        clsName = clsName.toUpperCase()
+        const jdbcType = _.find(JDBC_TYPES, (item) => item.dbName === clsName);
+        return jdbcType;
+    }
+
     /**
      * Find JDBC type descriptor for specified JDBC type and options.
      *

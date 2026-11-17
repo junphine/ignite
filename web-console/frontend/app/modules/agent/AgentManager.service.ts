@@ -808,9 +808,9 @@ export default class AgentManager {
 
                     return {
                         type: 'type',
-                        cacheName: meta.cacheName || '',
+                        cacheName: meta.cacheName,
                         typeName,
-                        maskedName,
+                        maskedName: maskedName,
                         description,
                         children: columns
                     };

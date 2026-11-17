@@ -35,13 +35,6 @@ export function _hasRunningQueries(paragraphs) {
         (paragraph) => paragraph.loading || paragraph.scanningInProgress || paragraph.csvIsPreparing);
 }
 
-const _numberClasses = ['java.math.BigDecimal', 'java.math.BigInteger', 'java.lang.Byte', 
-    'java.lang.Double', 'java.lang.Float', 'java.lang.Integer', 'java.lang.Long', 'java.lang.Short'];
-
-export const _numberType = function(cls) {
-    return _.includes(_numberClasses, cls);
-};
-
 let paragraphId = 0;
 
 export class Paragraph {

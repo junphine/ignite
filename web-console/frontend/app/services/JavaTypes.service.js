@@ -218,16 +218,14 @@ export default class JavaTypes {
 
     /**
      * @param clsName Class name to check.
-     * @param additionalClasses List of classes to check as builtin.
      * @returns {Boolean} 'true' if given class name is a java build-in type.
      */
-    isJavaBuiltInClass(clsName, additionalClasses=null) {
+    isJavaBuiltInClass(clsName) {
         if (!clsName || clsName.trim().length === 0)
             return false;
 
         return _.includes(this.javaBuiltInClasses(), clsName) 
-            || _.includes(this.javaBuiltInFullNameClasses(), clsName)
-            || (_.isArray(additionalClasses) && _.includes(additionalClasses, clsName));
+            || _.includes(this.javaBuiltInFullNameClasses(), clsName);
     }
 
     javaBuiltInBaseClasses() {

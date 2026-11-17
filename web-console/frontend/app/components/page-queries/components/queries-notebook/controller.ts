@@ -1,5 +1,3 @@
-
-
 import _ from 'lodash';
 import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
 import id8 from 'app/utils/id8';
@@ -21,19 +19,22 @@ import AgentManager from 'app/modules/agent/AgentManager.service';
 import {QueryActions} from './components/query-actions-button/controller';
 import {CancellationError} from 'app/errors/CancellationError';
 import {DemoService} from 'app/modules/demo/Demo.module';
-import {Paragraph,TIME_LINE,ROW_IDX,_numberType,_fullColName,_hideColumn,_allColumn,_hasRunningQueries} from './Paragraph';
-import { cache } from 'webpack/webpack.common';
+import {Paragraph,TIME_LINE,ROW_IDX,_fullColName,_hideColumn,_allColumn,_hasRunningQueries} from './Paragraph';
+import SqlTypes from "app/services/SqlTypes.service";
+import JavaTypes from "app/services/JavaTypes.service";
 
+const _intClasses = ['byte', 'integer', 'long', 'short', 'int','int8','int4','int2','bigint', 'smallint','tinyint','java.math.biginteger'];
 
+const _decimalClasses = ['double', 'float', 'real', 'numeric','decimal', 'java.math.bigdecimal'];
 
 // Controller for SQL notebook screen.
 export class NotebookCtrl {
-    static $inject = ['Demo', 'IgniteInput', '$scope', '$http', '$q', '$timeout', '$transitions', '$interval', '$animate', '$location', '$anchorScroll', '$state', '$filter', '$modal', '$popover', '$window', 'IgniteLoading', 'IgniteLegacyUtils', 'IgniteMessages', 'IgniteConfirm', 'AgentManager', 'IgniteChartColors', 'IgniteNotebook', 'IgniteNodes', 'uiGridExporterConstants', 'IgniteVersion', 'IgniteActivitiesData', 'JavaTypes', 'IgniteCopyToClipboard', 'CSV', 'IgniteErrorParser', 'DemoInfo', '$translate', 'StacktraceViewerDialog'];
+    static $inject = ['Demo', 'IgniteInput', '$scope', '$http', '$q', '$timeout', '$transitions', '$interval', '$animate', '$location', '$anchorScroll', '$state', '$filter', '$modal', '$popover', '$window', 'IgniteLoading', 'IgniteLegacyUtils', 'IgniteMessages', 'IgniteConfirm', 'AgentManager', 'IgniteChartColors', 'IgniteNotebook', 'IgniteNodes', 'uiGridExporterConstants', 'IgniteVersion', 'IgniteActivitiesData', 'JavaTypes', 'SqlTypes', 'IgniteCopyToClipboard', 'CSV', 'IgniteErrorParser', 'DemoInfo', '$translate', 'StacktraceViewerDialog'];
 
     /**
      * @param {CSV} CSV
      */
-    constructor(private Demo: DemoService, private IgniteInput: InputDialog, private $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, private Messages: ReturnType<typeof MessagesServiceFactory>, private Confirm: ReturnType<typeof LegacyConfirmServiceFactory>, agentMgr:AgentManager, IgniteChartColors, private Notebook: Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, IgniteCopyToClipboard, CSV:CSV, errorParser, DemoInfo, private $translate: ng.translate.ITranslateService, stacktraceViewerDialog) {
+    constructor(private Demo: DemoService, private IgniteInput: InputDialog, private $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, private Messages: ReturnType<typeof MessagesServiceFactory>, private Confirm: ReturnType<typeof LegacyConfirmServiceFactory>, agentMgr:AgentManager, IgniteChartColors, private Notebook: Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, SqlTypes, IgniteCopyToClipboard, CSV:CSV, errorParser, DemoInfo, private $translate: ng.translate.ITranslateService, stacktraceViewerDialog) {
         const $ctrl = this;
 
         this.CSV = CSV;
@@ -288,11 +289,17 @@ export class NotebookCtrl {
             return d3.time.format('%X')(new Date(d));
         }
 
-        const _intClasses = ['java.lang.Byte', 'java.lang.Integer', 'java.lang.Long', 'java.lang.Short'];
+        function _numberType(cls) {
+            return _.includes(_decimalClasses, cls.toLowerCase()) || _.includes(_intClasses, cls.toLowerCase());
+        }
 
         function _intType(cls) {
-            return _.includes(_intClasses, cls);
+            return _.includes(_intClasses, cls.toLowerCase());
         }
+
+        const _notObjectType = function(cls) {
+            return _numberType(cls) || JavaTypes.isJavaBuiltInClass(cls) || SqlTypes.isJdbcBuiltInType(cls);
+        };
 
         const _xAxisWithLabelFormat = function(paragraph:Paragraph) {
             return function(d) {
@@ -1099,10 +1106,6 @@ export class NotebookCtrl {
 
         const _columnFilter = function(paragraph) {
             return paragraph.disabledSystemColumns || paragraph.systemColumns ? _allColumn : _hideColumn;
-        };
-
-        const _notObjectType = function(cls) {
-            return JavaTypes.isJavaBuiltInClass(cls);
         };
 
         function _retainColumns(allCols, curCols, acceptableType, xAxis, unwantedCols) {
@@ -2115,13 +2118,7 @@ export class NotebookCtrl {
                             }
                             meta.name = (cache.schema || '"' + meta.cacheName + '"') + '.' + tableName;
                             meta.displayName = tableName;
-
-                            if (cache.schema)
-                                meta.children.unshift({type: 'plain', name: 'cacheName: ' + meta.maskedName, maskedName: meta.maskedName});
-                            if (cache.mode)
-                                meta.children.unshift({type: 'plain', name: 'mode: ' + cache.mode, maskedName: meta.maskedName});                            
                         }
-
                         return cache;
                     }), 'name');
 
