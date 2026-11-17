@@ -1246,6 +1246,8 @@ public class IgniteKernal implements IgniteEx, Externalizable {
                 }
             }
 
+            ctx.ssl().start(ctx);
+
             // Start plugins.
             for (PluginProvider<?> provider : ctx.plugins().allProviders())
                 provider.onIgniteStart();
@@ -1725,6 +1727,8 @@ public class IgniteKernal implements IgniteEx, Externalizable {
         GridKernalGateway gw = this.gw.get();
 
         if (stopGuard.compareAndSet(false, true)) {
+            ctx.ssl().stop();
+
             // Only one thread is allowed to perform stop sequence.
             boolean firstStop = false;
 
@@ -1973,32 +1977,6 @@ public class IgniteKernal implements IgniteEx, Externalizable {
             checkClusterState();
 
             return ctx.checkpoint().removeCheckpoint(key);
-        }
-        finally {
-            unguard();
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean eventUserRecordable(int type) {
-        guard();
-
-        try {
-            return ctx.event().isUserRecordable(type);
-        }
-        finally {
-            unguard();
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean allEventsUserRecordable(int[] types) {
-        A.notNull(types, "types");
-
-        guard();
-
-        try {
-            return ctx.event().isAllUserRecordable(types);
         }
         finally {
             unguard();

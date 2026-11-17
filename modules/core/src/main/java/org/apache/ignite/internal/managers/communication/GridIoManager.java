@@ -3365,7 +3365,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Object>> 
 
             lastTs = U.currentTimeMillis();
 
-            msgs.add(new OrderedMessageContainer(msg, lastTs, msgC));
+            msgs.add(new OrderedMessageContainer(msg, msgC));
         }
 
         /** {@inheritDoc} */
@@ -3515,7 +3515,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Object>> 
             GridIoMessage msg,
             @Nullable IgniteRunnable msgC
         ) {
-            msgs.add(new OrderedMessageContainer(msg, U.currentTimeMillis(), msgC));
+            msgs.add(new OrderedMessageContainer(msg, msgC));
         }
 
         /**
@@ -3555,20 +3555,14 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Object>> 
         GridIoMessage message;
 
         /** */
-        long addedTime;
-
-        /** */
         IgniteRunnable closure;
 
         /**
-         *
          * @param msg Received message.
-         * @param addedTime Time of added to queue.
          * @param c Message closure.
          */
-        private OrderedMessageContainer(GridIoMessage msg, Long addedTime, IgniteRunnable c) {
+        private OrderedMessageContainer(GridIoMessage msg, IgniteRunnable c) {
             this.message = msg;
-            this.addedTime = addedTime;
             this.closure = c;
         }
     }
