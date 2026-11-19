@@ -24,7 +24,6 @@ import org.apache.ignite.cache.QueryIndexType;
  * Describes an index to be created for a certain type. It contains all necessary
  * information about fields, order, uniqueness, and specified
  * whether this is SQL or Text index.
- * See also {@link GridQueryTypeDescriptor#indexes()}.
  */
 public interface GridQueryIndexDescriptor {
     /**

@@ -429,7 +429,21 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
         if (fullTextIdx == null)
             fullTextIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.FULLTEXT, 0);
 
-        fullTextIdx.addField(field, 0, false);
+        fullTextIdx.addField(field, 0, true); // true means toked field
+    }
+
+    /**
+     * Adds field to text index.
+     *
+     * @param field Field name.
+     * @param toked toked flag
+     * @throws IgniteCheckedException If failed.
+     */
+    public void addFieldToTextIndex(String field, boolean toked) throws IgniteCheckedException {
+        if (fullTextIdx == null)
+            fullTextIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.FULLTEXT, 0);
+
+        fullTextIdx.addField(field, 0, toked); // true means toked field
     }
 
     /** {@inheritDoc} */
