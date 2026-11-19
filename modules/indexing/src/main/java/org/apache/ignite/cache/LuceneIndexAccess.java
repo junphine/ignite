@@ -25,9 +25,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.store.Directory;
@@ -41,7 +39,8 @@ import org.springframework.core.io.InputStreamResource;
 /**
  * A wrapper for the Lucene writer and searcher.
  */
-public class LuceneIndexAccess {   
+public class LuceneIndexAccess {
+
 	public static final String DLF_LUCENE_CONFIG = "default";
 	 
     /** spring ctx for lucene.xml */
@@ -59,7 +58,6 @@ public class LuceneIndexAccess {
     /** 基于字段的分析器 */
     public PerFieldAnalyzerWrapper analyzerWrapper;
     
-    
     private Directory indexDir =  null;
 
     /**
@@ -75,7 +73,7 @@ public class LuceneIndexAccess {
     /**
      * The index searcher.
      */
-	public IndexSearcher searcher;   
+	public IndexSearcher searcher;
 	
 	/**
 	 *  current cache fields that must indexed by lucene. 
@@ -87,6 +85,7 @@ public class LuceneIndexAccess {
 	private String cacheName = null;
 	
 	private GridKernalContext ctx;
+
 	/**
 	 *  如果config/lucene.xml含有cacheName的bean，则使用这个bean作为luncene配置信息，否则使用default。
 	 * @param ctx
@@ -94,10 +93,10 @@ public class LuceneIndexAccess {
 	 * @param path
 	 * @throws IOException
 	 */
-	public LuceneIndexAccess(GridKernalContext ctx, String cacheName,String path) throws IOException{	
+	public LuceneIndexAccess(GridKernalContext ctx, String cacheName, String path) throws IOException{
 		this.ctx = ctx;
 		try{
-			File lucencConfigFile = new File(ctx.config().getIgniteHome() + "/config/lucene.xml");
+			File lucencConfigFile = new File(ctx.config().getIgniteHome(),"config/lucene.xml");
         	if(springCtx==null || lucencConfigFile.lastModified()>lastModifyTime) {
 				springCtx = initContext(new FileInputStream(lucencConfigFile));
 				lastModifyTime = lucencConfigFile.lastModified();
@@ -132,12 +131,8 @@ public class LuceneIndexAccess {
 	}  
 	
 	public Map<String,FieldType> fields(String type) {
-		Map<String,FieldType> fields = typeFields.get(type);
-		if(fields==null){
-			fields = new HashMap<>();
-			typeFields.put(type,fields);
-		}
-		return fields;
+        Map<String, FieldType> fields = typeFields.computeIfAbsent(type, k -> new HashMap<>());
+        return fields;
 	}
 	
 	public Analyzer getFieldAnalyzer(String field) {
@@ -153,7 +148,6 @@ public class LuceneIndexAccess {
 		return _instance;
 	}
 
-
 	public String getCacheName() {
 		return cacheName;
 	}
@@ -164,8 +158,9 @@ public class LuceneIndexAccess {
 	
 	public Map<String,FieldType> init(GridQueryTypeDescriptor type) {
 		Map<String,FieldType> fields = fields(type.name());
+		QueryIndexDescriptorImpl textIndex = (QueryIndexDescriptorImpl)type.textIndex();
 		try{        		
-			QueryIndex qtextIdx = ((QueryIndexDescriptorImpl)type.textIndex()).getQueryIndex();
+			QueryIndex qtextIdx = textIndex.getQueryIndex();
 			Set<String> vectorFields = new LinkedHashSet<>();
 
             if(qtextIdx instanceof FullTextQueryIndex){
@@ -207,14 +202,21 @@ public class LuceneIndexAccess {
         	if(qtextIdx!=null){
         		//-fields.clear();
         		for(String field: type.textIndex().fields()) {
-					if(fields.containsKey(field)){
-
-					}
-					else {
-						if (config.isStoreTextFieldValue()) {
-							fields.put(field, TextField.TYPE_STORED);
-						} else {
-							fields.put(field, TextField.TYPE_NOT_STORED);
+					if(!fields.containsKey(field)){
+						boolean isTok = textIndex.descending(field);
+						if(isTok) {
+							if (config.isStoreTextFieldValue()) {
+								fields.put(field, TextField.TYPE_STORED);
+							} else {
+								fields.put(field, TextField.TYPE_NOT_STORED);
+							}
+						}
+						else{
+							if (config.isStoreTextFieldValue()) {
+								fields.put(field, StringField.TYPE_STORED);
+							} else {
+								fields.put(field, StringField.TYPE_NOT_STORED);
+							}
 						}
 					}
         		}
@@ -252,7 +254,7 @@ public class LuceneIndexAccess {
 				}
 				else if (!field.getType().isArray() || field.getType().getComponentType() != float.class && field.getType().getComponentType() != double.class) {
 					throw new IllegalStateException(
-							"Field " + field.getName() + " has @QueryVectorField but is not float[]"
+							"Field " + field.getName() + " has @QueryVectorField but is not float[] or double[]"
 					);
 				}
 				fieldType.setVectorAttributes(vecAnn.dimension(), dataType, similarity);

@@ -28,6 +28,7 @@ import cn.hutool.core.io.FileUtil;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystemNotFoundException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,13 +41,14 @@ import java.util.stream.Collectors;
 import jakarta.mail.internet.MimeUtility;
 
 /**
- * for amis
+ * 基于JsonObject的对象管理接口，使用S3作为存储
  */
 @RestController
 @RequestMapping(value = "/docs")
 @Blocking
 @CrossOrigin
 public class JsonObjectController extends VertxInstanceAware{
+
 	private static final String ACCEPT_JSON = "Accept=application/json";
 	private static final String HEADER_X_AMZ_META_PREFIX = "x-amz-meta-";
 	
@@ -59,14 +61,17 @@ public class JsonObjectController extends VertxInstanceAware{
 	private String bucketName = "json_datasets";
 	
 	private S3Service s3Service() {
-    	String region = this.getIgniteInstanceName();    	
+    	String region = getIgniteInstanceName();
     	if(s3Service==null) {
     		try {
     			Ignite ignite = Ignition.ignite(region);
     			s3Service = new S3IgfsServiceImpl(region,systemConfig);
     		}
     		catch(Exception e) {
-    			s3Service = new S3LocalFileServiceImpl(region,systemConfig);
+				if(region.equalsIgnoreCase("local"))
+					s3Service = new S3LocalFileServiceImpl(region,systemConfig);
+				else
+					throw new FileSystemNotFoundException(region);
     		}
     	}
     	return s3Service;
@@ -112,7 +117,7 @@ public class JsonObjectController extends VertxInstanceAware{
 					if (name.charAt(0) == '/' && !fname.startsWith(name)) {
 						continue;
 					}
-					if (name.charAt(0) != '/' && fname.indexOf(name) < 0) {
+					if (name.charAt(0) != '/' && !fname.contains(name)) {
 						continue;
 					}
 				}
@@ -155,7 +160,7 @@ public class JsonObjectController extends VertxInstanceAware{
 					if (name.charAt(0) == '/' && !fname.startsWith(name)) {
 						return false;
 					}
-					if (name.charAt(0) != '/' && fname.indexOf(name) < 0) {
+					if (name.charAt(0) != '/' && !fname.contains(name)) {
 						return false;
 					}
 				}
@@ -193,7 +198,7 @@ public class JsonObjectController extends VertxInstanceAware{
 	 * 文档创建
 	 */
 	@RequestMapping(value = "/:collection/:path", method = RequestMethod.POST, headers = ACCEPT_JSON)
-	public JsonObject upload(@PathVariable("collection") String collection, 
+	public JsonObject upload(@PathVariable("collection") String collection,
 			@PathVariable("path") String destination,
 			HttpServerRequest request,
 			@RequestBody JsonObject json) {
@@ -210,8 +215,7 @@ public class JsonObjectController extends VertxInstanceAware{
 
 	/**
 	 * 文档下载/预览
-	 * 
-	 * @throws IOException
+	 *
 	 */
 	@RequestMapping(value = "/:collection/:path", method = RequestMethod.GET, headers = ACCEPT_JSON)
 	public void preview(HttpServerResponse response, 
@@ -223,7 +227,6 @@ public class JsonObjectController extends VertxInstanceAware{
 				"inline; filename=\"" + MimeUtility.encodeWord(FileUtil.getName(path)) + "\"");
 
 		try (S3ObjectInputStream objectStream = s3Service().getObject(bucketName, key(collection, path))) {
-			
 			response.end(Buffer.buffer(objectStream.readAllBytes()));
 		} catch (Exception e) {
 			response.setStatusCode(HttpStatus.NOT_FOUND.value());

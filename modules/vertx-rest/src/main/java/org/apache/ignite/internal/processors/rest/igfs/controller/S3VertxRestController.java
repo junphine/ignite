@@ -45,6 +45,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystemNotFoundException;
 import java.util.*;
 import java.util.stream.Collectors;
 import static org.apache.ignite.internal.processors.rest.igfs.util.CommonUtil.removeQuery;
@@ -63,8 +64,6 @@ public class S3VertxRestController extends VertxInstanceAware{
 	
 	private static final String RANGE = "Range";
 
-	private static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
-
 	private static final String HEADER_X_AMZ_META_PREFIX = "x-amz-meta-";
 	
 	private static final String HEADER_X_AMZ_COPY_SOURCE = "x-amz-copy-source";
@@ -72,11 +71,12 @@ public class S3VertxRestController extends VertxInstanceAware{
     private static final String HEADER_X_AMZ_COPY_OPTION = "x-amz-copy-option";
 	
 	private static final String contextPath = "/s3/";
-    public static final byte[] BYTES = new byte[0];
+
     public static final ByteBuf EMPTY = new EmptyByteBuf(ByteBufAllocator.DEFAULT);
 
     // 创建 DocumentBuilderFactory 和 DocumentBuilder
     private DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
+
     private TransformerFactory transformerFactory = TransformerFactory.newInstance();
 	
 	private Map<String,S3Service> s3ServiceMap = new HashMap<>();   
@@ -119,7 +119,7 @@ public class S3VertxRestController extends VertxInstanceAware{
      }
     
     private S3Service s3Service() {
-    	String region = this.getIgniteInstanceName();
+    	String region = getIgniteInstanceName();
     	S3Service s3 = s3ServiceMap.get(region);
     	if(s3==null) {
     		try {
@@ -130,7 +130,10 @@ public class S3VertxRestController extends VertxInstanceAware{
                     s3 = new S3LocalFileServiceImpl(region,systemConfig);
     		}
     		catch(Exception e) {
-    			s3 = new S3LocalFileServiceImpl(region,systemConfig);
+                if(region.equalsIgnoreCase("local"))
+    			    s3 = new S3LocalFileServiceImpl(region,systemConfig);
+                else
+                    throw new FileSystemNotFoundException(region);
     		}
     		s3ServiceMap.put(region, s3);
     	}

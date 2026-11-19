@@ -46,8 +46,6 @@ export class NotebookCtrl {
         $ctrl.chartSettingsTemplateUrl = chartSettingsTemplateUrl;
         $ctrl.demoStarted = false;
 
-        this.isDemo = this.Demo.enabled;
-
         this.allLoadedMetadatas = {};   // schema.typeName -> {children: [...], ...}
         this.cacheSqlSchemas = {};  // cacheName -> schema
 
