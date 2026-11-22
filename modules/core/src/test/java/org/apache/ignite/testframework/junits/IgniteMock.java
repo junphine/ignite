@@ -158,7 +158,7 @@ public class IgniteMock implements IgniteEx {
         try {
             kernalCtx = new StandaloneGridKernalContext(new GridTestLog4jLogger(), null) {
                 /** */
-                private final SslFactoryRegistry ssl = new SslFactoryRegistry();
+                private final SslFactoryRegistry ssl = new SslFactoryRegistry(this);
 
                 /** {@inheritDoc} */
                 @Override public SslFactoryRegistry ssl() {

@@ -883,14 +883,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                                     while (true) {
                                         GridCacheEntryEx entry = null;
 
-                                        try {
-                                            ctx.shared().database().ensureFreeSpace(ctx.dataRegion());
-                                        }
-                                        catch (IgniteCheckedException e) {
-                                            // Wrap errors (will be unwrapped).
-                                            throw new GridClosureException(e);
-                                        }
-
                                         ctx.shared().database().checkpointReadLock();
 
                                         try {
@@ -1205,12 +1197,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                         Message res0 = null;
 
                         if (info != null) {
-                            if (req.needEntryInfo()) {
-                                info.key(null);
-
-                                res0 = info;
-                            }
-                            else if (req.needVersion())
+                            if (req.needVersion())
                                 res0 = new CacheVersionedValue(info.value(), info.version(), info.cacheId());
                             else
                                 res0 = new CacheVersionedValue(info.value(), null, info.cacheId());
@@ -1301,7 +1288,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                 GridNearGetResponse res = new GridNearGetResponse(ctx.cacheId(),
                     req.futureId(),
                     req.miniId(),
-                    req.version(),
                     req.deployInfo() != null);
 
                 GridDhtFuture<Collection<GridCacheEntryInfo>> fut =
