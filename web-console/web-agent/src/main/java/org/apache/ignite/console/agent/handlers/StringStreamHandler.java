@@ -40,7 +40,8 @@ public class StringStreamHandler extends StreamHandler{
 		}
 	}
 	
-	public boolean isLoggable(LogRecord record) {
+	@Override
+    public boolean isLoggable(LogRecord record) {
 		if (record == null) {
             return false;
         }

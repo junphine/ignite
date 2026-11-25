@@ -1,0 +1,25 @@
+{
+    "name": "UcCountriesCache",
+    "cacheMode": "PARTITIONED",
+    "atomicityMode": "ATOMIC",
+    "readThrough": true,
+    "writeThrough": true,
+    "id": "586c23c7-aa90-4e00-9777-faddb4e7c4ec",
+    "domains": [
+        "416f223d-d12f-42b1-87e2-0e584ab472cb"
+    ],
+    "cacheStoreFactory": {
+        "kind": "CacheJdbcPojoStoreFactory",
+        "HiveCacheJdbcPojoStoreFactory": {
+            "dataSourceBean": "drupal_main_db",
+            "dialect": "MySQL"
+        },
+        "CacheJdbcPojoStoreFactory": {
+            "dataSourceBean": "drupal_main_db",
+            "dialect": "MySQL"
+        },
+        "CacheJdbcBlobStoreFactory": {
+            "connectVia": "DataSource"
+        }
+    }
+}

@@ -1,87 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
-         xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>${group}</groupId>
-        <artifactId>${artifact}</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-    </parent>
 
-    <artifactId>${artifact}-controller</artifactId>
+    <groupId>${packageName}</groupId>
+    <artifactId>${moduleName}</artifactId>
+    <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-
-    <name>${name}-controller</name>
-    <url>http://maven.apache.org</url>
+    <name>${moduleName} CRUD UI Plugin</name>
+    <description>
+        Generated crudui UI plugin: add it to the host application's
+        classpath and the CRUD views/API are registered automatically.
+    </description>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <maven-jar-plugin.version>3.0.0</maven-jar-plugin.version>
-        <maven.test.skip>true</maven.test.skip>
-        <spring-boot.version>3.4.5</spring-boot.version>
-        <shenyu.version>2.5.0</shenyu.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <ignite.version>2.16.999-SNAPSHOT</ignite.version>
+        <vaadin.version>24.6.11</vaadin.version>
     </properties>
 
-
     <dependencies>
-
+        <!-- Flow + Spring Boot starter（含 spring-web，@RestController 依赖） -->
         <dependency>
-            <groupId>${group}</groupId>
-            <artifactId>${name}-service</artifactId>
-            <version>${project.version}</version>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-spring-boot-starter</artifactId>
+            <version>${vaadin.version}</version>
         </dependency>
 
-        <!-- Web 依赖 -->
+        <!-- crudui add-on：UiPlugin SPI / GridCrud / crudui 表单（版本与 add-on/pom.xml 保持一致） -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <groupId>org.vaadin.crudui</groupId>
+            <artifactId>crudui</artifactId>
+            <version>7.2.99</version>
         </dependency>
 
-        <!-- 测试依赖 -->
+        <!-- IgniteRepository / @EnableIgniteRepositories / @RepositoryConfig -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
+            <groupId>org.apache.ignite</groupId>
+            <artifactId>ignite-spring-data-ext</artifactId>
+            <version>3.2.0</version>
         </dependency>
 
-        <!-- apache 工具 -->
+        <!-- @QuerySqlField -->
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
+            <groupId>org.apache.ignite</groupId>
+            <artifactId>ignite-core</artifactId>
+            <version>${ignite.version}</version>
         </dependency>
 
+        <!--
+            不再生成 entity：生成的代码直接引用已有 model 类，构建本工程时 classpath 上
+            必须能解析到模型所在工程。生成配置里提供 modelDependency=groupId:artifactId:version
+            即自动声明下面的依赖；否则请手动把模型工程（或其 jar）加入本模块 classpath。
+        -->
+#if($modelGroupId)
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
+            <groupId>${modelGroupId}</groupId>
+            <artifactId>${modelArtifactId}</artifactId>
+            <version>${modelVersion}</version>
         </dependency>
-
-
+#end
     </dependencies>
-
-    <build>
-        <finalName>${name}-${project.version}</finalName>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>${packageName}.${WebAppName}WebApplication</mainClass>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                            <goal>build-info</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
-
 </project>

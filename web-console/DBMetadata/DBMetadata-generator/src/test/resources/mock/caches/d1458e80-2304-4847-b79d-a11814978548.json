@@ -1,0 +1,25 @@
+{
+    "name": "UcCityCache",
+    "cacheMode": "PARTITIONED",
+    "atomicityMode": "ATOMIC",
+    "readThrough": true,
+    "writeThrough": true,
+    "id": "d1458e80-2304-4847-b79d-a11814978548",
+    "domains": [
+        "3faae6d0-d51a-4d41-8e16-f953cdfcfee4"
+    ],
+    "cacheStoreFactory": {
+        "kind": "CacheJdbcPojoStoreFactory",
+        "HiveCacheJdbcPojoStoreFactory": {
+            "dataSourceBean": "drupal_main_db",
+            "dialect": "MySQL"
+        },
+        "CacheJdbcPojoStoreFactory": {
+            "dataSourceBean": "drupal_main_db",
+            "dialect": "MySQL"
+        },
+        "CacheJdbcBlobStoreFactory": {
+            "connectVia": "DataSource"
+        }
+    }
+}

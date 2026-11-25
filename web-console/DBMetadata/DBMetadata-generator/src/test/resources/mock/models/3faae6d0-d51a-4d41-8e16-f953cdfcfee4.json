@@ -1,0 +1,112 @@
+{
+    "id": "3faae6d0-d51a-4d41-8e16-f953cdfcfee4",
+    "caches": [
+        "d1458e80-2304-4847-b79d-a11814978548"
+    ],
+    "generatePojo": true,
+    "keyType": "Long",
+    "valueType": "com.lr.drupal.model.UcCity",
+    "queryMetadata": "Configuration",
+    "databaseSchema": "drupal_user_db",
+    "databaseTable": "uc_city",
+    "fields": [
+        {
+            "name": "lid",
+            "className": "Long"
+        },
+        {
+            "name": "city",
+            "className": "String"
+        },
+        {
+            "name": "province",
+            "className": "Long"
+        },
+        {
+            "name": "country",
+            "className": "Long"
+        },
+        {
+            "name": "latitude",
+            "className": "BigDecimal"
+        },
+        {
+            "name": "longitude",
+            "className": "BigDecimal"
+        },
+        {
+            "name": "regionId",
+            "className": "Long"
+        },
+        {
+            "name": "weight",
+            "className": "Long"
+        }
+    ],
+    "queryKeyFields": [
+        "lid"
+    ],
+    "indexes": [],
+    "keyFields": [
+        {
+            "databaseFieldName": "lid",
+            "databaseFieldType": "INTEGER",
+            "javaType": "Long",
+            "javaFieldName": "lid",
+            "javaFieldType": "long"
+        }
+    ],
+    "aliases": [],
+    "valueFields": [
+        {
+            "databaseFieldName": "city",
+            "databaseFieldType": "VARCHAR",
+            "javaType": "String",
+            "javaFieldName": "city",
+            "javaFieldType": "String"
+        },
+        {
+            "databaseFieldName": "province",
+            "databaseFieldType": "INTEGER",
+            "javaType": "Long",
+            "javaFieldName": "province",
+            "javaFieldType": "long"
+        },
+        {
+            "databaseFieldName": "country",
+            "databaseFieldType": "INTEGER",
+            "javaType": "Long",
+            "javaFieldName": "country",
+            "javaFieldType": "long"
+        },
+        {
+            "databaseFieldName": "latitude",
+            "databaseFieldType": "DECIMAL",
+            "javaType": "BigDecimal",
+            "javaFieldName": "latitude",
+            "javaFieldType": "BigDecimal"
+        },
+        {
+            "databaseFieldName": "longitude",
+            "databaseFieldType": "DECIMAL",
+            "javaType": "BigDecimal",
+            "javaFieldName": "longitude",
+            "javaFieldType": "BigDecimal"
+        },
+        {
+            "databaseFieldName": "region_id",
+            "databaseFieldType": "INTEGER",
+            "javaType": "Long",
+            "javaFieldName": "regionId",
+            "javaFieldType": "Long"
+        },
+        {
+            "databaseFieldName": "weight",
+            "databaseFieldType": "INTEGER",
+            "javaType": "Long",
+            "javaFieldName": "weight",
+            "javaFieldType": "Long"
+        }
+    ],
+    "keyFieldName": "lid"
+}

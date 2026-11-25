@@ -1,0 +1,68 @@
+{
+    "id": "b4dc7e48-cf0d-48f7-9f36-4efcc430d84d",
+    "caches": [
+        "5f411376-4639-4b6e-85c1-3380cccbecff"
+    ],
+    "generatePojo": true,
+    "keyType": "com.lr.drupal.model.ProfileValuesKey",
+    "valueType": "com.lr.drupal.model.ProfileValues",
+    "queryMetadata": "Configuration",
+    "databaseSchema": "drupal_user_db",
+    "databaseTable": "profile_values",
+    "fields": [
+        {
+            "name": "fid",
+            "className": "Long"
+        },
+        {
+            "name": "uid",
+            "className": "Long"
+        },
+        {
+            "name": "value",
+            "className": "String"
+        }
+    ],
+    "queryKeyFields": [
+        "fid",
+        "uid"
+    ],
+    "indexes": [
+        {
+            "name": "fid",
+            "indexType": "SORTED",
+            "fields": [
+                {
+                    "name": "fid",
+                    "direction": false
+                }
+            ]
+        }
+    ],
+    "keyFields": [
+        {
+            "databaseFieldName": "fid",
+            "databaseFieldType": "INTEGER",
+            "javaType": "Long",
+            "javaFieldName": "fid",
+            "javaFieldType": "long"
+        },
+        {
+            "databaseFieldName": "uid",
+            "databaseFieldType": "INTEGER",
+            "javaType": "Long",
+            "javaFieldName": "uid",
+            "javaFieldType": "long"
+        }
+    ],
+    "aliases": [],
+    "valueFields": [
+        {
+            "databaseFieldName": "value",
+            "databaseFieldType": "LONGVARCHAR",
+            "javaType": "String",
+            "javaFieldName": "value",
+            "javaFieldType": "String"
+        }
+    ]
+}

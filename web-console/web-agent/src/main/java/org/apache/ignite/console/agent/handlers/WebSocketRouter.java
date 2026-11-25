@@ -4,17 +4,14 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.webmvc.mcp.ToolExecutionContext;
 import io.vertx.webmvc.mcp.ToolExecutor;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteIllegalStateException;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.Ignition;
+import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.agent.AgentUtils;
 import org.apache.ignite.console.agent.IgniteClusterLauncher;
 import org.apache.ignite.console.agent.ServiceDeployment;
-import org.apache.ignite.console.agent.code.CrudUICodeGenerator;
+
 import org.apache.ignite.console.agent.db.DataSourceManager;
 import org.apache.ignite.console.agent.rest.GremlinExecutor;
 import org.apache.ignite.console.agent.rest.RestRequest;
@@ -25,6 +22,7 @@ import org.apache.ignite.console.agent.service.ServiceResult;
 import org.apache.ignite.console.agent.task.CacheServiceMapperTask;
 import org.apache.ignite.console.demo.AgentClusterDemo;
 import org.apache.ignite.console.demo.AgentMetadataDemo;
+import org.apache.ignite.console.generator.code.CrudUICodeGenerator;
 import org.apache.ignite.console.utils.Utils;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
@@ -750,7 +748,7 @@ public class WebSocketRouter implements AutoCloseable,Session.Listener.AutoDeman
     /**
      * @param msg Token to revoke.
      */
-    private JsonObject processCallClusterCommand(String msg) {
+    private JsonObject processCallClusterCommand(String msg) throws IgniteCheckedException {
         logger.info("Cluster cmd has been revoked: " + msg);        
         JsonObject json = fromJson(msg);
         

@@ -8,23 +8,20 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_JETTY_PO
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_TCP_ADDRS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_TCP_PORT;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import lombok.Data;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
@@ -360,9 +357,8 @@ public class IgniteClusterLauncher implements StartNodeCallable{
 
     /**
      * Start ignite node with cacheEmployee and populate it with data.
-     * @throws IgniteCheckedException 
      */
-    public static boolean saveBlobToFile(JsonObject json,String destPath,List<String> messages) throws IgniteCheckedException {
+    public static boolean saveBlobToFile(JsonObject json,String destPath,List<String> messages) {
 
 		String clusterName = json.getString("name");
     	String base64 = json.getString("blob");    	 
@@ -397,7 +393,7 @@ public class IgniteClusterLauncher implements StartNodeCallable{
      * Start ignite node with cacheEmployee and populate it with data.
      * @throws IgniteCheckedException 
      */
-    public static File saveDataToFile(String fileName,String json) throws IgniteCheckedException {    	
+    public static File saveDataToFile(String fileName,String json) throws IgniteCheckedException {
     	
     	String work = U.workDirectory(null, null)+ "/config/";
 		U.mkdirs(new File(work));
@@ -420,20 +416,22 @@ public class IgniteClusterLauncher implements StartNodeCallable{
     /**
      * @param json Token to revoke.
      */
-    public static JsonObject callClusterCommand(Ignite ignite,String cmdName,JsonObject json) {
-        log.info("Cluster cmd is invoking: " + cmdName);                
+    public static JsonObject callClusterCommand(Ignite ignite,String cmdName,JsonObject json) throws IgniteCheckedException {
+        log.info("Cluster cmd is invoking: " + cmdName);
         
         JsonArray args = json.getJsonArray("args");        
         JsonObject stat = new JsonObject();
         
         List<String> argsList = new ArrayList<>();
+		argsList.add(cmdName);
+
         if(ignite!=null) {
 	        
         	ClusterNode node = ignite.cluster().localNode();
 	        Collection<String> tcpAddrs = node.addresses();
 	        String host = "127.0.0.1";
 			for(String ip: tcpAddrs) {
-				if(ip.indexOf(":")<0) {
+				if(!ip.contains(":")) {
 					host = ip;
 					break;
 				}
@@ -448,17 +446,12 @@ public class IgniteClusterLauncher implements StartNodeCallable{
         if(args!=null) {
         	args.forEach(e-> argsList.addAll(Arrays.asList(e.toString().split("\\s"))));
         }
-        else {
-        	argsList.add(cmdName);
-        }
-        
         StringStreamHandler outHandder = new StringStreamHandler();        
         java.util.logging.Logger logger = java.util.logging.Logger.getLogger(CommandHandler.class.getName() + "Log");
         logger.addHandler(outHandder);
         JavaLogger javaLogger = new JavaLogger(logger,!JavaLogger.isConfigured());
-        CommandHandler hnd = new CommandHandler(javaLogger);
-        hnd.console = null;
-        
+		CommandHandler hnd = new CommandHandler(javaLogger);
+		hnd.console = null;
         if(cmdName.equals("commandList")) {
         	IgniteCommandRegistry cmdReg = null;
         	if(ignite==null) {        		
@@ -470,7 +463,6 @@ public class IgniteClusterLauncher implements StartNodeCallable{
 				} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
 					e.printStackTrace();
 				}
-            	
         	}
         	else {
         		cmdReg = ((IgniteEx)ignite).commandsRegistry();
@@ -488,7 +480,7 @@ public class IgniteClusterLauncher implements StartNodeCallable{
 	        		String desc = "";
 					try {
 						desc = c.description();
-					}catch (Exception e){
+					}catch (Exception ignored){
 						// ignore
 					}
 	        		
@@ -498,15 +490,39 @@ public class IgniteClusterLauncher implements StartNodeCallable{
 	            	cmd.put("usage", usage);
 	            	cmd.put("experimental", c.argClass().getSimpleName());
 	            	results.add(cmd);
-        		}
-        		catch(Exception e) {
+        		}catch(Exception ignore) {
 					// ignore
         		}
-            }           
+            }
         	
         	stat.put("result", results);
         	return stat;
         }
+		if(cmdName.equals("startUI")) {
+			int code = startClusterCrudUICommand(ignite.name(),argsList,stat);
+			stat.put("code",code);
+			javaLogger.flush();
+			if(code==CommandHandler.EXIT_CODE_OK) {
+				stat.put("message", outHandder.getOutput());
+			}
+			else {
+				stat.put("message", outHandder.getOutput());
+			}
+			return stat;
+		}
+		if(cmdName.equals("stopUI")) {
+			int code = stopClusterCrudUICommand(ignite.name(),argsList,stat);
+			stat.put("code",code);
+			javaLogger.flush();
+			if(code==CommandHandler.EXIT_CODE_OK) {
+				stat.put("message", outHandder.getOutput());
+			}
+			else {
+				stat.put("message", outHandder.getOutput());
+			}
+			return stat;
+		}
+
         int code = hnd.execute(argsList);
         stat.put("code",code);
         javaLogger.flush();
@@ -518,13 +534,126 @@ public class IgniteClusterLauncher implements StartNodeCallable{
         }
         return stat;
     }
-   
-    @Override
+
+	/** 从 ProcessHandle 抽取可持久化信息。 */
+	public static ProcessSnapshot toSnapshot(ProcessHandle handle) {
+		ProcessHandle.Info info = handle.info();
+
+		ProcessSnapshot s = new ProcessSnapshot();
+		s.setPid(handle.pid());
+
+		// 启动时间：Instant -> epochMillis（可能缺失）
+		s.setStartEpochMillis(info.startInstant().map(Instant::toEpochMilli).orElse(null));
+
+		// 命令行 / 参数 / 可执行路径 / 用户，均可能为空
+		s.setCommand(info.command().orElse(null));
+		s.setArguments(info.arguments().map(List::of).orElse(null)); // List.of(array)
+		s.setCommandLine(info.commandLine().orElse(null));
+		s.setUser(info.user().orElse(null));
+		s.setSavedAtEpochMillis(System.currentTimeMillis());
+		return s;
+	}
+
+	/**
+	 * @param args
+	 */
+	public static int startClusterCrudUICommand(String clusterName,List<String> args,JsonObject stat) throws IgniteCheckedException {
+		log.info("Cluster {} ui is start...",clusterName);
+		clusterName = Utils.escapeFileName(clusterName);
+		String cwd = U.workDirectory(null, null)+ "/config/"+clusterName;
+		// 指定工作目录
+		File workDir = new File(cwd);
+
+		// 构建命令（注意：命令和参数要分开传入）
+		ProcessBuilder pb = new ProcessBuilder(args.toArray(new String[args.size()]));
+		// 设置工作目录
+		pb.directory(workDir);
+
+		// 继承当前进程的 IO（输出直接打印到控制台）
+		pb.inheritIO();
+
+		try {
+			Process process = pb.start();
+
+			ProcessSnapshot snap = toSnapshot(process.toHandle());
+			String info = Utils.toJson(snap);
+			saveDataToFile(clusterName+"/process.json",info);
+			return 0;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return -1;
+		}
+	}
+
+	/**
+	 * @param args
+	 */
+	public static int stopClusterCrudUICommand(String clusterName,List<String> args,JsonObject stat) throws IgniteCheckedException {
+		log.info("Cluster {} ui is stop...",clusterName);
+		clusterName = Utils.escapeFileName(clusterName);
+		String cwd = U.workDirectory(null, null)+ "/config/"+clusterName;
+		File infoFile = new File(cwd,"process.json");
+		long pid = 0L;
+        try {
+            Reader fileReader = new FileReader(infoFile);
+			ProcessSnapshot snap = Utils.fromJson(fileReader,ProcessSnapshot.class);
+			pid = snap.pid;
+        } catch (IOException e) {
+			stat.put("message","UI进程没有启动!");
+            return 0;
+        }
+        Duration grace = Duration.ofSeconds(5);
+		Optional<ProcessHandle> opt = ProcessHandle.of(pid);
+		if (opt.isPresent() && opt.get().isAlive()) {
+			ProcessHandle h = opt.get();
+
+			// 2) 先礼：SIGTERM
+			h.destroy();
+			if (waitDead(h, grace)){
+				infoFile.delete();
+				return 0;
+			}
+
+			// 3) 后兵：SIGKILL
+			h.destroyForcibly();
+			if (waitDead(h, grace)){
+				infoFile.delete();
+				return 0;
+			}
+			return -1;
+		}
+		infoFile.delete();
+		return 0;
+	}
+
+	private static boolean waitDead(ProcessHandle h, Duration grace) {
+		long deadline = System.nanoTime() + grace.toNanos();
+		while (System.nanoTime() < deadline) {
+			if (!h.isAlive()) return true;
+			try { Thread.sleep(100); }
+			catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+		}
+		return !h.isAlive();
+	}
+
+		@Override
 	public ClusterStartNodeResult call() throws Exception {
 		// start node by agent
     	// 给其他agent发送启动消息
 		ClusterStartNodeResult result = new ClusterStartNodeResultImpl(spec.host(),false,"not implement!");
 		return result;
+	}
+
+	@Data
+	public static class ProcessSnapshot {
+		private long pid;                 // 关键：重新定位用
+		private Long startEpochMillis;    // 关键：防 PID 复用误杀
+		private String command;           // 可执行文件路径
+		private List<String> arguments;   // 参数（可能为空）
+		private String commandLine;       // 完整命令行（可能为空）
+		private String user;              // 启动用户（可能为空）
+		private long savedAtEpochMillis;  // 记录时间
+		// getters/setters ...
 	}
 
 }

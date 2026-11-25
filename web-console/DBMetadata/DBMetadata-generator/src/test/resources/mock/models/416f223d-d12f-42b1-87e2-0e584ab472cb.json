@@ -1,0 +1,90 @@
+{
+    "id": "416f223d-d12f-42b1-87e2-0e584ab472cb",
+    "caches": [
+        "586c23c7-aa90-4e00-9777-faddb4e7c4ec"
+    ],
+    "generatePojo": true,
+    "keyType": "Long",
+    "valueType": "com.lr.drupal.model.UcCountries",
+    "queryMetadata": "Configuration",
+    "databaseSchema": "drupal_user_db",
+    "databaseTable": "uc_countries",
+    "fields": [
+        {
+            "name": "countryId",
+            "className": "Long"
+        },
+        {
+            "name": "countryName",
+            "className": "String"
+        },
+        {
+            "name": "countryIsoCode2",
+            "className": "String"
+        },
+        {
+            "name": "countryIsoCode3",
+            "className": "String"
+        },
+        {
+            "name": "version",
+            "className": "Short"
+        }
+    ],
+    "queryKeyFields": [
+        "countryId"
+    ],
+    "indexes": [
+        {
+            "name": "uc_countries_country_name",
+            "indexType": "SORTED",
+            "fields": [
+                {
+                    "name": "countryName",
+                    "direction": false
+                }
+            ]
+        }
+    ],
+    "keyFields": [
+        {
+            "databaseFieldName": "country_id",
+            "databaseFieldType": "INTEGER",
+            "javaType": "Long",
+            "javaFieldName": "countryId",
+            "javaFieldType": "long"
+        }
+    ],
+    "aliases": [],
+    "valueFields": [
+        {
+            "databaseFieldName": "country_name",
+            "databaseFieldType": "VARCHAR",
+            "javaType": "String",
+            "javaFieldName": "countryName",
+            "javaFieldType": "String"
+        },
+        {
+            "databaseFieldName": "country_iso_code_2",
+            "databaseFieldType": "CHAR",
+            "javaType": "String",
+            "javaFieldName": "countryIsoCode2",
+            "javaFieldType": "String"
+        },
+        {
+            "databaseFieldName": "country_iso_code_3",
+            "databaseFieldType": "CHAR",
+            "javaType": "String",
+            "javaFieldName": "countryIsoCode3",
+            "javaFieldType": "String"
+        },
+        {
+            "databaseFieldName": "version",
+            "databaseFieldType": "SMALLINT",
+            "javaType": "Short",
+            "javaFieldName": "version",
+            "javaFieldType": "short"
+        }
+    ],
+    "keyFieldName": "countryId"
+}

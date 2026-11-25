@@ -1882,7 +1882,7 @@ export default class IgniteConfigurationGenerator {
                 if (scales)
                     cfg.mapProperty('fieldsScale', scales, 'fieldsScale');
             }
-
+            let indexNo = 0;
             const indexes = _.map(domain.indexes, (index) => {
                 let queryIndexCls = 'org.apache.ignite.cache.QueryIndex';
                 if (available('2.16.999')){
@@ -1891,8 +1891,8 @@ export default class IgniteConfigurationGenerator {
                     if(index.indexType=='VECTOR')
                         queryIndexCls = 'org.apache.ignite.cache.VectorQueryIndex';
                 }
-
-                const bean = new Bean(queryIndexCls, 'index', index, cacheDflts.indexes)
+                indexNo++;
+                const bean = new Bean(queryIndexCls, 'index'+indexNo, index, cacheDflts.indexes)
                     .stringProperty('name')
                     .enumProperty('indexType')
                     .mapProperty('indFlds', 'fields', 'fields', true);
